@@ -7,6 +7,7 @@ from pathlib import Path
 
 from boxsvg.models import (
     BoxRequest,
+    SUPPORTED_LID_FITS,
     SUPPORTED_MATERIALS,
     SUPPORTED_STYLES,
     SUPPORTED_UNITS,
@@ -37,6 +38,12 @@ def validate_request(request: BoxRequest) -> list[str]:
         errors.append(
             f"Unsupported material: '{request.material}'. "
             f"Supported: {', '.join(SUPPORTED_MATERIALS)}"
+        )
+
+    if request.lid not in SUPPORTED_LID_FITS:
+        errors.append(
+            f"Unsupported lid fit: '{request.lid}'. "
+            f"Supported: {', '.join(SUPPORTED_LID_FITS)}"
         )
 
     for dim_name in ("length", "width", "height"):

@@ -49,7 +49,7 @@ def generate_mailer_dieline(request: BoxRequest) -> Dieline:
 
     # Panel heights
     tuck_h = H / 2
-    top_panel_h = W + T / 2
+    top_panel_h = W - T / 2 if request.lid == "inside" else W + T / 2
     front_panel_h = H
     bottom_panel_h = W
     back_panel_h = H

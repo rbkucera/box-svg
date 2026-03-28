@@ -102,6 +102,15 @@ def test_zero_thickness_matches_nominal():
     assert result.width == pytest.approx(9.5)
 
 
+def test_lid_inside_shorter_top_panel():
+    """Lid 'inside' should produce a shorter top panel than 'over'."""
+    r_over = generate_mailer_dieline(make_request(lid="over"))
+    r_inside = generate_mailer_dieline(make_request(lid="inside"))
+    # Inside lid is shorter by T (T/2 becomes -T/2)
+    T = 0.125  # default corrugated
+    assert r_inside.height == pytest.approx(r_over.height - T)
+
+
 def test_back_panel_exists():
     """The dieline should have a full back panel (L×H) at the bottom."""
     req = make_request(thickness=0.0, length=6.0, width=2.0, height=3.5)

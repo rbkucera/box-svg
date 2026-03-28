@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 SUPPORTED_STYLES = ("mailer",)
 SUPPORTED_UNITS = ("in", "mm")
 SUPPORTED_MATERIALS = ("corrugated", "chipboard")
+SUPPORTED_LID_FITS = ("over", "inside")
 
 # Default material thicknesses in inches
 DEFAULT_THICKNESS = {
@@ -24,6 +25,7 @@ class BoxRequest:
     height: float
     units: str = "in"
     material: str = "corrugated"
+    lid: str = "over"
     thickness: float | None = None
     kerf: float | None = None
     output: str | None = None

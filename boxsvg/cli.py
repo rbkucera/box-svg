@@ -6,7 +6,7 @@ import sys
 
 import click
 
-from boxsvg.models import BoxRequest, SUPPORTED_MATERIALS, SUPPORTED_STYLES, SUPPORTED_UNITS
+from boxsvg.models import BoxRequest, SUPPORTED_LID_FITS, SUPPORTED_MATERIALS, SUPPORTED_STYLES, SUPPORTED_UNITS
 from boxsvg.validation import validate_request, validate_output_path, warn_unusual
 from boxsvg.units import to_inches
 from boxsvg.generators import generate_dieline
@@ -75,13 +75,14 @@ def main():
 @click.option("--height", type=float, help="Box height.")
 @click.option("--units", type=click.Choice(SUPPORTED_UNITS, case_sensitive=False), help="Measurement units.")
 @click.option("--material", type=click.Choice(SUPPORTED_MATERIALS, case_sensitive=False), help="Material type.")
+@click.option("--lid", type=click.Choice(SUPPORTED_LID_FITS, case_sensitive=False), help="Lid fit: 'over' wraps outside, 'inside' tucks in.")
 @click.option("--thickness", type=float, help="Material thickness (in selected units).")
 @click.option("--kerf", type=float, help="Laser kerf compensation (in selected units).")
 @click.option("--output", "-o", type=str, help="Output SVG file path.")
 @click.option("--force", is_flag=True, help="Overwrite output file if it exists.")
 @click.option("--interactive", "interactive_flag", is_flag=True, default=False, help="Force interactive mode.")
 @click.option("--no-interactive", "no_interactive", is_flag=True, default=False, help="Disable interactive prompts.")
-def generate(style, length, width, height, units, material, thickness, kerf, output, force, interactive_flag, no_interactive):
+def generate(style, length, width, height, units, material, lid, thickness, kerf, output, force, interactive_flag, no_interactive):
     """Generate an SVG box dieline."""
     # Determine if we need interactive prompts
     missing_required = length is None or width is None or height is None
@@ -104,6 +105,8 @@ def generate(style, length, width, height, units, material, thickness, kerf, out
         units = "in"
     if material is None:
         material = "corrugated"
+    if lid is None:
+        lid = "over"
     if output is None:
         output = "box.svg"
 
@@ -118,6 +121,7 @@ def generate(style, length, width, height, units, material, thickness, kerf, out
         height=to_inches(height, units),
         units=units,
         material=material,
+        lid=lid,
         thickness=thickness_in,
         kerf=kerf_in,
         output=output,
