@@ -104,3 +104,41 @@ def test_zero_thickness_matches_nominal():
     # With t=0: flap_w=1.0, fa=0, no adjustments
     assert result.width == pytest.approx(8.0)  # 1.0 + 6.0 + 1.0
     assert result.height == pytest.approx(10.0)  # 1.0 + 2.0 + 3.5 + 2.0 + 1.5
+
+
+def test_flaps_have_notch_gaps():
+    """Side flaps should be inset from score lines by material thickness,
+    creating notch gaps that allow neat folding."""
+    t = 0.25
+    req = make_request(thickness=t, length=6.0, width=2.0, height=3.5)
+    result = generate_mailer_dieline(req)
+
+    # Collect all horizontal cut lines at the flap x-range (left flap region)
+    # Exclude the very bottom and top edges (outer perimeter, not notches)
+    flap_w = 2.0 / 2 - t  # 0.75
+    body_left = flap_w
+    margin = 0.01
+    flap_cuts_y = sorted({
+        line.y1
+        for line in result.lines
+        if line.kind == "cut" and line.y1 == line.y2  # horizontal
+        and min(line.x1, line.x2) < body_left        # extends into flap region
+        and max(line.x1, line.x2) <= body_left + 0.001  # ends at body edge
+        and line.y1 > margin                          # not the top edge
+        and line.y1 < result.height - margin          # not the bottom edge
+    })
+
+    # Score line y positions (horizontal scores spanning the body)
+    score_ys = sorted({
+        line.y1
+        for line in result.lines
+        if line.kind == "score" and line.y1 == line.y2  # horizontal
+        and line.x1 != line.x2  # not a zero-length line
+    })
+
+    # Each flap notch edge should be offset from its nearest score line by t
+    for flap_y in flap_cuts_y:
+        min_dist = min(abs(flap_y - sy) for sy in score_ys)
+        # Should be either t (notch inset) or 0 (at a score line that's also a flap boundary)
+        assert min_dist == pytest.approx(t, abs=0.01) or min_dist == pytest.approx(0, abs=0.01), \
+            f"Flap edge at y={flap_y} is {min_dist} from nearest score, expected {t} or 0"
