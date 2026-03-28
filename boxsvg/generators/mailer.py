@@ -54,7 +54,7 @@ def _side_flaps(
     # Top-left notch: arc from body edge at score line curving to flap top
     elements.append(Arc(x1=body_left, y1=y_top,
                         x2=body_left - r, y2=flap_top,
-                        r=r, sweep=0, kind="cut"))
+                        r=r, sweep=1, kind="cut"))
     elements.append(_hline(body_left - r, x_left_flap, flap_top, "cut"))
 
     # Left flap outer edge
@@ -64,13 +64,13 @@ def _side_flaps(
     elements.append(_hline(x_left_flap, body_left - r, flap_bot, "cut"))
     elements.append(Arc(x1=body_left - r, y1=flap_bot,
                         x2=body_left, y2=y_bottom,
-                        r=r, sweep=0, kind="cut"))
+                        r=r, sweep=1, kind="cut"))
 
     # --- RIGHT FLAP ---
     # Top-right notch
     elements.append(Arc(x1=body_right, y1=y_top,
                         x2=body_right + r, y2=flap_top,
-                        r=r, sweep=1, kind="cut"))
+                        r=r, sweep=0, kind="cut"))
     elements.append(_hline(body_right + r, x_right_flap, flap_top, "cut"))
 
     # Right flap outer edge
@@ -80,7 +80,7 @@ def _side_flaps(
     elements.append(_hline(x_right_flap, body_right + r, flap_bot, "cut"))
     elements.append(Arc(x1=body_right + r, y1=flap_bot,
                         x2=body_right, y2=y_bottom,
-                        r=r, sweep=1, kind="cut"))
+                        r=r, sweep=0, kind="cut"))
 
     # Score lines at flap fold edges (between the arcs)
     elements.append(_vline(body_left, flap_top, flap_bot, "score"))
