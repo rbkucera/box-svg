@@ -98,12 +98,14 @@ def test_svg_contains_line_elements():
     assert len(lines) > 0
 
 
-def test_svg_contains_path_elements_for_arcs():
+def test_svg_has_diagonal_bevel_lines():
+    """Bevels produce diagonal line elements (not horizontal or vertical)."""
     svg = make_svg()
     root = ET.fromstring(svg)
     ns = {"svg": "http://www.w3.org/2000/svg"}
-    paths = root.findall(".//svg:path", ns)
-    assert len(paths) > 0
-    # All paths should have arc commands
-    for p in paths:
-        assert " A " in p.attrib["d"]
+    lines = root.findall(".//svg:line", ns)
+    diagonals = [
+        l for l in lines
+        if l.attrib["x1"] != l.attrib["x2"] and l.attrib["y1"] != l.attrib["y2"]
+    ]
+    assert len(diagonals) > 0

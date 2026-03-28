@@ -143,14 +143,16 @@ def test_bottom_panel_wider():
     assert widths[1] == pytest.approx(6.0 + T)
 
 
-def test_has_arcs_for_radiused_corners():
-    """Notch gaps should have arcs at corners."""
+def test_has_bevels_at_notch_gaps():
+    """Notch gaps should have 45-degree bevel cuts."""
     result = generate_mailer_dieline(make_request(thickness=0.125))
-    arcs = [el for el in result.elements if isinstance(el, Arc)]
-    # 4 panels with flaps × 2 sides × 2 corners × 2 (top+bottom of notch) = 32 arcs
-    assert len(arcs) > 0
-    assert all(a.kind == "cut" for a in arcs)
-    assert all(a.r > 0 for a in arcs)
+    # Find diagonal lines (bevels: neither horizontal nor vertical)
+    bevels = [
+        el for el in result.elements
+        if isinstance(el, Line) and el.kind == "cut"
+        and abs(el.x1 - el.x2) > 0.001 and abs(el.y1 - el.y2) > 0.001
+    ]
+    assert len(bevels) > 0
 
 
 def test_tuck_is_tapered():
@@ -166,14 +168,6 @@ def test_tuck_is_tapered():
     ]
     assert len(top_cuts) == 1
     top_width = abs(top_cuts[0].x2 - top_cuts[0].x1)
-
-    # Find diagonal tuck edges (neither horizontal nor vertical)
-    diagonals = [
-        el for el in result.elements
-        if isinstance(el, Line) and el.kind == "cut"
-        and el.x1 != el.x2 and el.y1 != el.y2
-    ]
-    assert len(diagonals) == 2  # left and right taper edges
 
     # The base of the tuck (at the score line) should be wider than the top
     T = 0.125
