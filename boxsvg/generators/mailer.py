@@ -82,9 +82,9 @@ def _side_flaps(
                         x2=body_right, y2=y_bottom,
                         r=r, sweep=0, kind="cut"))
 
-    # Score lines at flap fold edges (between the arcs)
-    elements.append(_vline(body_left, flap_top, flap_bot, "score"))
-    elements.append(_vline(body_right, flap_top, flap_bot, "score"))
+    # Score lines at flap fold edges (full panel height — arcs branch off from these)
+    elements.append(_vline(body_left, y_top, y_bottom, "score"))
+    elements.append(_vline(body_right, y_top, y_bottom, "score"))
 
 
 def generate_mailer_dieline(request: BoxRequest) -> Dieline:
