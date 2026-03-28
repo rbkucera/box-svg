@@ -30,7 +30,7 @@ def prompt_value(name: str, default: str | None = None, type_fn=str) -> str:
             click.echo(f"  {name} is required.")
 
 
-def prompt_missing(style, length, width, height, units, material, thickness, kerf, output):
+def prompt_missing(style, length, width, height, units, material, lid, thickness, kerf, output):
     """Interactively prompt for any missing required values."""
     click.echo("Interactive mode — enter box parameters:\n")
 
@@ -46,6 +46,8 @@ def prompt_missing(style, length, width, height, units, material, thickness, ker
         height = float(prompt_value("Height", type_fn=float))
     if material is None:
         material = prompt_value("Material (corrugated/chipboard)", default="corrugated")
+    if lid is None:
+        lid = prompt_value("Lid fit (over/inside)", default="over")
     if thickness is None:
         raw = input("  Thickness (optional, press Enter to skip): ").strip()
         if raw:
@@ -58,7 +60,7 @@ def prompt_missing(style, length, width, height, units, material, thickness, ker
         output = prompt_value("Output filename", default="box.svg")
 
     click.echo()
-    return style, length, width, height, units, material, thickness, kerf, output
+    return style, length, width, height, units, material, lid, thickness, kerf, output
 
 
 @click.group()
@@ -94,8 +96,8 @@ def generate(style, length, width, height, units, material, lid, thickness, kerf
         raise SystemExit(1)
 
     if use_interactive:
-        style, length, width, height, units, material, thickness, kerf, output = prompt_missing(
-            style, length, width, height, units, material, thickness, kerf, output
+        style, length, width, height, units, material, lid, thickness, kerf, output = prompt_missing(
+            style, length, width, height, units, material, lid, thickness, kerf, output
         )
 
     # Apply defaults for non-interactive mode
