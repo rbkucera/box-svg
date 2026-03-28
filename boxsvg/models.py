@@ -16,7 +16,6 @@ DEFAULT_THICKNESS = {
 }
 
 
-
 @dataclass
 class BoxRequest:
     style: str
@@ -48,7 +47,21 @@ class Line:
 
 
 @dataclass
+class Arc:
+    x1: float  # start point
+    y1: float
+    x2: float  # end point
+    y2: float
+    r: float   # radius
+    sweep: int  # 0 = counter-clockwise, 1 = clockwise
+    kind: str   # "cut" or "score"
+
+
+Element = Line | Arc
+
+
+@dataclass
 class Dieline:
     width: float
     height: float
-    lines: list[Line] = field(default_factory=list)
+    elements: list[Element] = field(default_factory=list)

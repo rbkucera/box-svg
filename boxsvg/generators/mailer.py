@@ -2,7 +2,7 @@
 
 Layout (top to bottom in SVG):
 
-    Tuck flap       L × H/2       (inset by T on each side)
+    Tuck flap       L × H/2       (tapered, inset by T)
     ─── score ───
     Top panel       (L+T) × (W + T/2)   side flaps: H/2 + T
     ─── score ───
@@ -12,14 +12,14 @@ Layout (top to bottom in SVG):
     ─── score ───
     Back panel      L × H                side flaps: W/2 + T
 
-Side flaps are inset vertically by T to create notch gaps at folds.
+Side flaps are inset vertically by T with radiused corners at notch gaps.
 Top and bottom panels are wider than front/back by T to account for
 material thickness when wrapping.
 """
 
 from __future__ import annotations
 
-from boxsvg.models import BoxRequest, Dieline, Line
+from boxsvg.models import Arc, BoxRequest, Dieline, Element, Line
 
 
 def _hline(x1: float, x2: float, y: float, kind: str) -> Line:
@@ -31,7 +31,7 @@ def _vline(x: float, y1: float, y2: float, kind: str) -> Line:
 
 
 def _side_flaps(
-    lines: list[Line],
+    elements: list[Element],
     body_left: float,
     body_right: float,
     flap_w: float,
@@ -39,31 +39,52 @@ def _side_flaps(
     y_bottom: float,
     t: float,
 ) -> None:
-    """Add left and right side flaps for a panel, inset vertically by t."""
+    """Add left and right side flaps for a panel with radiused notch gaps.
+
+    The notch gap is t tall. Each corner gets a quarter-circle arc with
+    radius r = t, connecting the body edge directly to the flap edge.
+    """
     x_left_flap = body_left - flap_w
     x_right_flap = body_right + flap_w
     flap_top = y_top + t
     flap_bot = y_bottom - t
+    r = t  # arc radius = notch gap size
 
-    # Left flap
-    lines.append(_hline(body_left, x_left_flap, flap_top, "cut"))    # top notch
-    lines.append(_vline(x_left_flap, flap_top, flap_bot, "cut"))     # outer edge
-    lines.append(_hline(x_left_flap, body_left, flap_bot, "cut"))    # bottom notch
+    # --- LEFT FLAP ---
+    # Top-left notch: arc from body edge at score line curving to flap top
+    elements.append(Arc(x1=body_left, y1=y_top,
+                        x2=body_left - r, y2=flap_top,
+                        r=r, sweep=0, kind="cut"))
+    elements.append(_hline(body_left - r, x_left_flap, flap_top, "cut"))
 
-    # Right flap
-    lines.append(_hline(body_right, x_right_flap, flap_top, "cut"))
-    lines.append(_vline(x_right_flap, flap_top, flap_bot, "cut"))
-    lines.append(_hline(x_right_flap, body_right, flap_bot, "cut"))
+    # Left flap outer edge
+    elements.append(_vline(x_left_flap, flap_top, flap_bot, "cut"))
 
-    # Vertical cut segments at notch gaps (body edge, above and below flap)
-    lines.append(_vline(body_left, y_top, flap_top, "cut"))
-    lines.append(_vline(body_right, y_top, flap_top, "cut"))
-    lines.append(_vline(body_left, flap_bot, y_bottom, "cut"))
-    lines.append(_vline(body_right, flap_bot, y_bottom, "cut"))
+    # Bottom-left notch: flap bottom curving back to body edge at score line
+    elements.append(_hline(x_left_flap, body_left - r, flap_bot, "cut"))
+    elements.append(Arc(x1=body_left - r, y1=flap_bot,
+                        x2=body_left, y2=y_bottom,
+                        r=r, sweep=0, kind="cut"))
 
-    # Score lines at flap fold edges
-    lines.append(_vline(body_left, flap_top, flap_bot, "score"))
-    lines.append(_vline(body_right, flap_top, flap_bot, "score"))
+    # --- RIGHT FLAP ---
+    # Top-right notch
+    elements.append(Arc(x1=body_right, y1=y_top,
+                        x2=body_right + r, y2=flap_top,
+                        r=r, sweep=1, kind="cut"))
+    elements.append(_hline(body_right + r, x_right_flap, flap_top, "cut"))
+
+    # Right flap outer edge
+    elements.append(_vline(x_right_flap, flap_top, flap_bot, "cut"))
+
+    # Bottom-right notch
+    elements.append(_hline(x_right_flap, body_right + r, flap_bot, "cut"))
+    elements.append(Arc(x1=body_right + r, y1=flap_bot,
+                        x2=body_right, y2=y_bottom,
+                        r=r, sweep=1, kind="cut"))
+
+    # Score lines at flap fold edges (between the arcs)
+    elements.append(_vline(body_left, flap_top, flap_bot, "score"))
+    elements.append(_vline(body_right, flap_top, flap_bot, "score"))
 
 
 def generate_mailer_dieline(request: BoxRequest) -> Dieline:
@@ -92,8 +113,6 @@ def generate_mailer_dieline(request: BoxRequest) -> Dieline:
     total_h = tuck_h + top_panel_h + front_panel_h + bottom_panel_h + back_panel_h
 
     # Total dieline width = widest panel + its flaps
-    # Height panels: (W/2+T) + L + (W/2+T) = L + W + 2T
-    # Width panels:  (H/2+T) + (L+T) + (H/2+T) = L + H + 3T
     total_w = max(narrow_body + 2 * height_flap_w, wide_body + 2 * width_flap_w)
 
     # Center x: all panels are horizontally centered in the canvas
@@ -115,58 +134,63 @@ def generate_mailer_dieline(request: BoxRequest) -> Dieline:
     y_back_top = y_bottom_top + bottom_panel_h
     y_back_bottom = total_h
 
-    lines: list[Line] = []
+    elements: list[Element] = []
 
-    # === TUCK FLAP ===
-    tuck_inset = T
-    x_tuck_left = narrow_left + tuck_inset
-    x_tuck_right = narrow_right - tuck_inset
+    # === TUCK FLAP (tapered trapezoid) ===
+    tuck_base_inset = T
+    tuck_taper = H / 8  # additional inset at the top edge
+    x_tuck_base_left = narrow_left + tuck_base_inset
+    x_tuck_base_right = narrow_right - tuck_base_inset
+    x_tuck_tip_left = narrow_left + tuck_base_inset + tuck_taper
+    x_tuck_tip_right = narrow_right - tuck_base_inset - tuck_taper
 
-    lines.append(_hline(x_tuck_left, x_tuck_right, y_tuck_top, "cut"))       # top edge
-    lines.append(_vline(x_tuck_left, y_tuck_top, y_top_top, "cut"))          # left edge
-    lines.append(_vline(x_tuck_right, y_tuck_top, y_top_top, "cut"))         # right edge
-    # Horizontal cuts connecting tuck to top panel body
-    lines.append(_hline(narrow_left, x_tuck_left, y_top_top, "cut"))
-    lines.append(_hline(x_tuck_right, narrow_right, y_top_top, "cut"))
+    elements.append(_hline(x_tuck_tip_left, x_tuck_tip_right, y_tuck_top, "cut"))  # top edge
+    elements.append(Line(x1=x_tuck_tip_left, y1=y_tuck_top,
+                         x2=x_tuck_base_left, y2=y_top_top, kind="cut"))            # left taper
+    elements.append(Line(x1=x_tuck_tip_right, y1=y_tuck_top,
+                         x2=x_tuck_base_right, y2=y_top_top, kind="cut"))           # right taper
+    # Horizontal cuts connecting tuck base to top panel body
+    elements.append(_hline(narrow_left, x_tuck_base_left, y_top_top, "cut"))
+    elements.append(_hline(x_tuck_base_right, narrow_right, y_top_top, "cut"))
 
     # === TOP PANEL === (wide body: L+T)
-    lines.append(_hline(wide_left, wide_right, y_top_top, "score"))
-    lines.append(_hline(wide_left, wide_right, y_front_top, "score"))
-    # Horizontal cuts connecting narrow tuck edge to wide top panel body
-    lines.append(_hline(wide_left, narrow_left, y_top_top, "cut"))
-    lines.append(_hline(narrow_right, wide_right, y_top_top, "cut"))
-    _side_flaps(lines, wide_left, wide_right, width_flap_w, y_top_top, y_front_top, T)
-    # Transition cuts at bottom: wide top panel to narrow front panel
-    lines.append(_hline(wide_left, narrow_left, y_front_top, "cut"))
-    lines.append(_hline(narrow_right, wide_right, y_front_top, "cut"))
+    elements.append(_hline(wide_left, wide_right, y_top_top, "score"))
+    elements.append(_hline(wide_left, wide_right, y_front_top, "score"))
+    # Horizontal cuts: narrow tuck edge to wide top panel body
+    elements.append(_hline(wide_left, narrow_left, y_top_top, "cut"))
+    elements.append(_hline(narrow_right, wide_right, y_top_top, "cut"))
+    _side_flaps(elements, wide_left, wide_right, width_flap_w, y_top_top, y_front_top, T)
+    # Transition cuts: wide top panel to narrow front panel
+    elements.append(_hline(wide_left, narrow_left, y_front_top, "cut"))
+    elements.append(_hline(narrow_right, wide_right, y_front_top, "cut"))
 
     # === FRONT PANEL === (narrow body: L)
-    lines.append(_hline(narrow_left, narrow_right, y_bottom_top, "score"))
-    _side_flaps(lines, narrow_left, narrow_right, height_flap_w, y_front_top, y_bottom_top, T)
-    # Transition cuts at bottom: narrow front to wide bottom
-    lines.append(_hline(wide_left, narrow_left, y_bottom_top, "cut"))
-    lines.append(_hline(narrow_right, wide_right, y_bottom_top, "cut"))
+    elements.append(_hline(narrow_left, narrow_right, y_bottom_top, "score"))
+    _side_flaps(elements, narrow_left, narrow_right, height_flap_w, y_front_top, y_bottom_top, T)
+    # Transition cuts: narrow front to wide bottom
+    elements.append(_hline(wide_left, narrow_left, y_bottom_top, "cut"))
+    elements.append(_hline(narrow_right, wide_right, y_bottom_top, "cut"))
 
     # === BOTTOM PANEL === (wide body: L+T)
-    lines.append(_hline(wide_left, wide_right, y_back_top, "score"))
-    _side_flaps(lines, wide_left, wide_right, width_flap_w, y_bottom_top, y_back_top, T)
-    # Transition cuts at bottom: wide bottom to narrow back
-    lines.append(_hline(wide_left, narrow_left, y_back_top, "cut"))
-    lines.append(_hline(narrow_right, wide_right, y_back_top, "cut"))
+    elements.append(_hline(wide_left, wide_right, y_back_top, "score"))
+    _side_flaps(elements, wide_left, wide_right, width_flap_w, y_bottom_top, y_back_top, T)
+    # Transition cuts: wide bottom to narrow back
+    elements.append(_hline(wide_left, narrow_left, y_back_top, "cut"))
+    elements.append(_hline(narrow_right, wide_right, y_back_top, "cut"))
 
     # === BACK PANEL === (narrow body: L)
-    lines.append(_hline(narrow_left, narrow_right, y_back_bottom, "cut"))   # bottom edge
-    _side_flaps(lines, narrow_left, narrow_right, height_flap_w, y_back_top, y_back_bottom, T)
+    elements.append(_hline(narrow_left, narrow_right, y_back_bottom, "cut"))  # bottom edge
+    _side_flaps(elements, narrow_left, narrow_right, height_flap_w, y_back_top, y_back_bottom, T)
 
     # Kerf compensation: uniform expansion
     k = kerf / 2
     if k > 0:
-        for line in lines:
-            line.x1 += k
-            line.y1 += k
-            line.x2 += k
-            line.y2 += k
+        for el in elements:
+            el.x1 += k
+            el.y1 += k
+            el.x2 += k
+            el.y2 += k
         total_w += kerf
         total_h += kerf
 
-    return Dieline(width=total_w, height=total_h, lines=lines)
+    return Dieline(width=total_w, height=total_h, elements=elements)

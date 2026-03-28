@@ -25,7 +25,6 @@ def make_svg(units="in", **overrides):
 
 def test_valid_xml():
     svg = make_svg()
-    # Should parse without errors
     ET.fromstring(svg)
 
 
@@ -97,3 +96,14 @@ def test_svg_contains_line_elements():
     ns = {"svg": "http://www.w3.org/2000/svg"}
     lines = root.findall(".//svg:line", ns)
     assert len(lines) > 0
+
+
+def test_svg_contains_path_elements_for_arcs():
+    svg = make_svg()
+    root = ET.fromstring(svg)
+    ns = {"svg": "http://www.w3.org/2000/svg"}
+    paths = root.findall(".//svg:path", ns)
+    assert len(paths) > 0
+    # All paths should have arc commands
+    for p in paths:
+        assert " A " in p.attrib["d"]
