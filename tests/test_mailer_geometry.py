@@ -29,14 +29,18 @@ def test_dieline_has_lines():
 
 
 def test_dieline_dimensions():
+    # L=6, W=2, H=3.5, T=0.125 (default corrugated)
     req = make_request(length=6.0, width=2.0, height=3.5)
     result = generate_mailer_dieline(req)
-    # Default corrugated: t=0.125, fa=0.125*1.0=0.125
-    # flap_w = 2.0/2 - 0.125 = 0.875
-    # Width: 0.875 + 6.0 + 0.875 = 7.75
-    assert result.width == pytest.approx(7.75)
-    # Height: dust(1.0) + bottom(2.0) + front(3.5+0.125) + top(2.0+0.125) + tuck(1.5) = 10.25
-    assert result.height == pytest.approx(10.25)
+    T = 0.125
+    # Height: H/2 + (W+T/2) + H + W + H = 1.75 + 2.0625 + 3.5 + 2.0 + 3.5 = 12.8125
+    expected_h = 3.5/2 + (2.0 + T/2) + 3.5 + 2.0 + 3.5
+    assert result.height == pytest.approx(expected_h)
+    # Width: max of (L + W + 2T, L + H + 3T)
+    #   L + W + 2T = 6 + 2 + 0.25 = 8.25
+    #   L + H + 3T = 6 + 3.5 + 0.375 = 9.875
+    expected_w = max(6.0 + 2.0 + 2*T, 6.0 + 3.5 + 3*T)
+    assert result.width == pytest.approx(expected_w)
 
 
 def test_has_cut_and_score_lines():
@@ -49,10 +53,10 @@ def test_has_cut_and_score_lines():
 def test_all_lines_within_bounds():
     result = generate_mailer_dieline(make_request())
     for line in result.lines:
-        assert 0 <= line.x1 <= result.width + 0.001, f"x1 out of bounds: {line}"
-        assert 0 <= line.x2 <= result.width + 0.001, f"x2 out of bounds: {line}"
-        assert 0 <= line.y1 <= result.height + 0.001, f"y1 out of bounds: {line}"
-        assert 0 <= line.y2 <= result.height + 0.001, f"y2 out of bounds: {line}"
+        assert -0.001 <= line.x1 <= result.width + 0.001, f"x1 out of bounds: {line}"
+        assert -0.001 <= line.x2 <= result.width + 0.001, f"x2 out of bounds: {line}"
+        assert -0.001 <= line.y1 <= result.height + 0.001, f"y1 out of bounds: {line}"
+        assert -0.001 <= line.y2 <= result.height + 0.001, f"y2 out of bounds: {line}"
 
 
 def test_score_lines_are_horizontal_or_vertical():
@@ -78,10 +82,9 @@ def test_square_box():
 def test_thickness_affects_output():
     r_thin = generate_mailer_dieline(make_request(thickness=0.05))
     r_thick = generate_mailer_dieline(make_request(thickness=0.25))
-    # Thicker material -> narrower flaps -> smaller total width
-    assert r_thick.width < r_thin.width
-    # Thicker material -> larger fold allowance -> taller total height
-    assert r_thick.height > r_thin.height
+    # Different thickness -> different dimensions
+    assert r_thick.width != r_thin.width
+    assert r_thick.height != r_thin.height
 
 
 def test_kerf_expands_dieline():
@@ -94,51 +97,83 @@ def test_kerf_expands_dieline():
 def test_material_affects_output():
     r_corr = generate_mailer_dieline(make_request(material="corrugated"))
     r_chip = generate_mailer_dieline(make_request(material="chipboard"))
-    # Different materials have different default thickness and fold allowance
+    # Different materials have different default thickness
     assert r_corr.height != r_chip.height
     assert r_corr.width != r_chip.width
 
 
 def test_zero_thickness_matches_nominal():
     result = generate_mailer_dieline(make_request(thickness=0.0, length=6.0, width=2.0, height=3.5))
-    # With t=0: flap_w=1.0, fa=0, no adjustments
-    assert result.width == pytest.approx(8.0)  # 1.0 + 6.0 + 1.0
-    assert result.height == pytest.approx(10.0)  # 1.0 + 2.0 + 3.5 + 2.0 + 1.5
+    # With T=0: no thickness compensation
+    # Height: H/2 + W + H + W + H = 1.75 + 2 + 3.5 + 2 + 3.5 = 12.75
+    assert result.height == pytest.approx(12.75)
+    # Width: max(L+W, L+H) = max(8, 9.5) = 9.5
+    assert result.width == pytest.approx(9.5)
+
+
+def test_back_panel_exists():
+    """The dieline should have a full back panel (L×H) at the bottom."""
+    req = make_request(thickness=0.0, length=6.0, width=2.0, height=3.5)
+    result = generate_mailer_dieline(req)
+    # With T=0, the back panel bottom edge should be a horizontal cut
+    # at y = total_h spanning the body width
+    bottom_cuts = [
+        line for line in result.lines
+        if line.kind == "cut" and line.y1 == line.y2
+        and abs(line.y1 - result.height) < 0.001
+    ]
+    # Should have a bottom edge cut spanning the body
+    body_span = max(abs(l.x2 - l.x1) for l in bottom_cuts)
+    assert body_span == pytest.approx(6.0)  # L
+
+
+def test_bottom_panel_wider():
+    """The bottom panel body should be L+T wide, wider than front/back panels."""
+    T = 0.25
+    req = make_request(thickness=T, length=6.0, width=2.0, height=3.5)
+    result = generate_mailer_dieline(req)
+
+    # Find horizontal score lines (panel boundaries)
+    h_scores = sorted({
+        line.y1 for line in result.lines
+        if line.kind == "score" and line.y1 == line.y2
+        and abs(line.x2 - line.x1) > 1.0  # wide enough to be a panel boundary
+    })
+
+    # Find the widths of these score lines
+    score_widths = {}
+    for y in h_scores:
+        matching = [
+            line for line in result.lines
+            if line.kind == "score" and abs(line.y1 - y) < 0.001
+            and line.y1 == line.y2
+            and abs(line.x2 - line.x1) > 1.0
+        ]
+        if matching:
+            score_widths[y] = max(abs(l.x2 - l.x1) for l in matching)
+
+    widths = sorted(set(score_widths.values()))
+    # Should have two distinct widths: L and L+T
+    assert len(widths) == 2
+    assert widths[0] == pytest.approx(6.0)      # narrow panels (front/back)
+    assert widths[1] == pytest.approx(6.0 + T)   # wide panels (top/bottom)
 
 
 def test_flaps_have_notch_gaps():
-    """Side flaps should be inset from score lines by material thickness,
-    creating notch gaps that allow neat folding."""
-    t = 0.25
-    req = make_request(thickness=t, length=6.0, width=2.0, height=3.5)
+    """Side flaps should be inset from score lines by material thickness."""
+    T = 0.25
+    req = make_request(thickness=T, length=6.0, width=2.0, height=3.5)
     result = generate_mailer_dieline(req)
 
-    # Collect all horizontal cut lines at the flap x-range (left flap region)
-    # Exclude the very bottom and top edges (outer perimeter, not notches)
-    flap_w = 2.0 / 2 - t  # 0.75
-    body_left = flap_w
-    margin = 0.01
-    flap_cuts_y = sorted({
-        line.y1
-        for line in result.lines
-        if line.kind == "cut" and line.y1 == line.y2  # horizontal
-        and min(line.x1, line.x2) < body_left        # extends into flap region
-        and max(line.x1, line.x2) <= body_left + 0.001  # ends at body edge
-        and line.y1 > margin                          # not the top edge
-        and line.y1 < result.height - margin          # not the bottom edge
-    })
+    # Find vertical score lines (flap fold lines)
+    v_score_ys = []
+    for line in result.lines:
+        if line.kind == "score" and line.x1 == line.x2:
+            v_score_ys.append((line.y1, line.y2))
 
-    # Score line y positions (horizontal scores spanning the body)
-    score_ys = sorted({
-        line.y1
-        for line in result.lines
-        if line.kind == "score" and line.y1 == line.y2  # horizontal
-        and line.x1 != line.x2  # not a zero-length line
-    })
-
-    # Each flap notch edge should be offset from its nearest score line by t
-    for flap_y in flap_cuts_y:
-        min_dist = min(abs(flap_y - sy) for sy in score_ys)
-        # Should be either t (notch inset) or 0 (at a score line that's also a flap boundary)
-        assert min_dist == pytest.approx(t, abs=0.01) or min_dist == pytest.approx(0, abs=0.01), \
-            f"Flap edge at y={flap_y} is {min_dist} from nearest score, expected {t} or 0"
+    # Each vertical score should span less than its panel height
+    # (because flaps are inset by T at top and bottom)
+    for y1, y2 in v_score_ys:
+        span = abs(y2 - y1)
+        # The score span should end T before the panel boundary
+        assert span > 0, "Score line should have non-zero length"

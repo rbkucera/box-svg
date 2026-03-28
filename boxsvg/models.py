@@ -15,11 +15,6 @@ DEFAULT_THICKNESS = {
     "chipboard": 0.050,
 }
 
-# Per-material fold allowance factor (multiplied by thickness per 90° fold)
-MATERIAL_PROPERTIES = {
-    "corrugated": {"fold_allowance_factor": 1.0},
-    "chipboard": {"fold_allowance_factor": 0.5},
-}
 
 
 @dataclass
@@ -41,11 +36,6 @@ class BoxRequest:
 
     def effective_kerf(self) -> float:
         return self.kerf if self.kerf is not None else 0.0
-
-    def fold_allowance(self) -> float:
-        """Linear distance added per 90-degree fold, based on material and thickness."""
-        props = MATERIAL_PROPERTIES.get(self.material, {"fold_allowance_factor": 1.0})
-        return props["fold_allowance_factor"] * self.effective_thickness()
 
 
 @dataclass

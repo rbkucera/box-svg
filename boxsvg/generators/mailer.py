@@ -1,19 +1,20 @@
 """Mailer box (roll-end tuck-top) dieline generator.
 
-Layout (unfolded, bottom-up):
+Layout (top to bottom in SVG):
 
-    Bottom dust flaps
+    Tuck flap       L × H/2       (inset by T on each side)
     ─── score ───
-    Bottom panel    (length × width)
+    Top panel       (L+T) × (W + T/2)   side flaps: H/2 + T
     ─── score ───
-    Front panel     (length × height)
+    Front panel     L × H                side flaps: W/2 + T
     ─── score ───
-    Top panel       (length × width)
+    Bottom panel    (L+T) × W            side flaps: H/2 + T
     ─── score ───
-    Top tuck flap   (length × tuck_depth)
+    Back panel      L × H                side flaps: W/2 + T
 
-Side flaps extend from the left and right edges of each panel,
-inset vertically by material thickness to create notch gaps at folds.
+Side flaps are inset vertically by T to create notch gaps at folds.
+Top and bottom panels are wider than front/back by T to account for
+material thickness when wrapping.
 """
 
 from __future__ import annotations
@@ -31,133 +32,133 @@ def _vline(x: float, y1: float, y2: float, kind: str) -> Line:
 
 def _side_flaps(
     lines: list[Line],
-    x_left_flap: float,
-    x_body_left: float,
-    x_body_right: float,
-    x_right_flap: float,
+    body_left: float,
+    body_right: float,
+    flap_w: float,
     y_top: float,
     y_bottom: float,
     t: float,
 ) -> None:
-    """Add left and right side flaps for a panel, inset by thickness t."""
-    # Flaps are inset vertically by t at top and bottom to create notch gaps
+    """Add left and right side flaps for a panel, inset vertically by t."""
+    x_left_flap = body_left - flap_w
+    x_right_flap = body_right + flap_w
     flap_top = y_top + t
     flap_bot = y_bottom - t
 
     # Left flap
-    lines.append(_hline(x_body_left, x_left_flap, flap_top, "cut"))   # top notch
-    lines.append(_vline(x_left_flap, flap_top, flap_bot, "cut"))      # outer edge
-    lines.append(_hline(x_left_flap, x_body_left, flap_bot, "cut"))   # bottom notch
+    lines.append(_hline(body_left, x_left_flap, flap_top, "cut"))    # top notch
+    lines.append(_vline(x_left_flap, flap_top, flap_bot, "cut"))     # outer edge
+    lines.append(_hline(x_left_flap, body_left, flap_bot, "cut"))    # bottom notch
 
     # Right flap
-    lines.append(_hline(x_body_right, x_right_flap, flap_top, "cut"))
+    lines.append(_hline(body_right, x_right_flap, flap_top, "cut"))
     lines.append(_vline(x_right_flap, flap_top, flap_bot, "cut"))
-    lines.append(_hline(x_right_flap, x_body_right, flap_bot, "cut"))
+    lines.append(_hline(x_right_flap, body_right, flap_bot, "cut"))
 
-    # Vertical cut segments along the body edge (above and below the flap)
-    # Top notch vertical segments
-    lines.append(_vline(x_body_left, y_top, flap_top, "cut"))
-    lines.append(_vline(x_body_right, y_top, flap_top, "cut"))
-    # Bottom notch vertical segments
-    lines.append(_vline(x_body_left, flap_bot, y_bottom, "cut"))
-    lines.append(_vline(x_body_right, flap_bot, y_bottom, "cut"))
+    # Vertical cut segments at notch gaps (body edge, above and below flap)
+    lines.append(_vline(body_left, y_top, flap_top, "cut"))
+    lines.append(_vline(body_right, y_top, flap_top, "cut"))
+    lines.append(_vline(body_left, flap_bot, y_bottom, "cut"))
+    lines.append(_vline(body_right, flap_bot, y_bottom, "cut"))
 
     # Score lines at flap fold edges
-    lines.append(_vline(x_body_left, flap_top, flap_bot, "score"))
-    lines.append(_vline(x_body_right, flap_top, flap_bot, "score"))
+    lines.append(_vline(body_left, flap_top, flap_bot, "score"))
+    lines.append(_vline(body_right, flap_top, flap_bot, "score"))
 
 
 def generate_mailer_dieline(request: BoxRequest) -> Dieline:
-    L = request.length  # along the horizontal center
+    L = request.length
     W = request.width
     H = request.height
-    t = request.effective_thickness()
+    T = request.effective_thickness()
     kerf = request.effective_kerf()
-    fa = request.fold_allowance()
 
-    # Flap dimensions — reduced by thickness to prevent overlap when folded
-    flap_w = W / 2 - t
-    tuck_depth = W * 0.75   # tuck flap depth
-    dust_flap_h = W * 0.5   # bottom dust flaps
+    # Panel heights (vertical extent in the dieline)
+    tuck_h = H / 2
+    top_panel_h = W + T / 2
+    front_panel_h = H
+    bottom_panel_h = W
+    back_panel_h = H
 
-    # Panel heights with fold allowance compensation
-    bottom_panel_h = W                # base panel, no compensation needed
-    front_panel_h = H + fa            # wraps around bottom panel material
-    top_panel_h = W + fa              # wraps over front panel material
+    # Panel body widths
+    narrow_body = L          # front, back panels
+    wide_body = L + T        # top, bottom panels
 
-    # Total layout dimensions
-    # Horizontal: flap_w | L | flap_w
-    # Vertical (bottom to top): dust_flap_h | bottom | front | top | tuck
-    total_w = flap_w + L + flap_w
-    total_h = dust_flap_h + bottom_panel_h + front_panel_h + top_panel_h + tuck_depth
+    # Side flap widths (vary by panel type)
+    height_flap_w = W / 2 + T    # for height panels (front, back)
+    width_flap_w = H / 2 + T     # for width panels (top, bottom)
 
-    # Key x coordinates
-    x_left_flap = 0.0
-    x_body_left = flap_w
-    x_body_right = flap_w + L
-    x_right_flap = total_w
+    # Total dieline height
+    total_h = tuck_h + top_panel_h + front_panel_h + bottom_panel_h + back_panel_h
 
-    # Key y coordinates (from top of SVG)
+    # Total dieline width = widest panel + its flaps
+    # Height panels: (W/2+T) + L + (W/2+T) = L + W + 2T
+    # Width panels:  (H/2+T) + (L+T) + (H/2+T) = L + H + 3T
+    total_w = max(narrow_body + 2 * height_flap_w, wide_body + 2 * width_flap_w)
+
+    # Center x: all panels are horizontally centered in the canvas
+    cx = total_w / 2
+
+    # Body x coordinates for narrow panels (front, back, tuck)
+    narrow_left = cx - narrow_body / 2
+    narrow_right = cx + narrow_body / 2
+
+    # Body x coordinates for wide panels (top, bottom)
+    wide_left = cx - wide_body / 2
+    wide_right = cx + wide_body / 2
+
+    # Y coordinates (top to bottom)
     y_tuck_top = 0.0
-    y_top_panel_top = tuck_depth
-    y_front_panel_top = y_top_panel_top + top_panel_h
-    y_bottom_panel_top = y_front_panel_top + front_panel_h
-    y_dust_top = y_bottom_panel_top + bottom_panel_h
-    y_bottom = total_h
+    y_top_top = tuck_h
+    y_front_top = y_top_top + top_panel_h
+    y_bottom_top = y_front_top + front_panel_h
+    y_back_top = y_bottom_top + bottom_panel_h
+    y_back_bottom = total_h
 
     lines: list[Line] = []
 
     # === TUCK FLAP ===
-    tuck_inset = t
-    x_tuck_left = x_body_left + tuck_inset
-    x_tuck_right = x_body_right - tuck_inset
+    tuck_inset = T
+    x_tuck_left = narrow_left + tuck_inset
+    x_tuck_right = narrow_right - tuck_inset
 
     lines.append(_hline(x_tuck_left, x_tuck_right, y_tuck_top, "cut"))       # top edge
-    lines.append(_vline(x_tuck_left, y_tuck_top, y_top_panel_top, "cut"))    # left edge
-    lines.append(_vline(x_tuck_right, y_tuck_top, y_top_panel_top, "cut"))   # right edge
-    # Horizontal cuts connecting tuck flap to body
-    lines.append(_hline(x_body_left, x_tuck_left, y_top_panel_top, "cut"))
-    lines.append(_hline(x_tuck_right, x_body_right, y_top_panel_top, "cut"))
+    lines.append(_vline(x_tuck_left, y_tuck_top, y_top_top, "cut"))          # left edge
+    lines.append(_vline(x_tuck_right, y_tuck_top, y_top_top, "cut"))         # right edge
+    # Horizontal cuts connecting tuck to top panel body
+    lines.append(_hline(narrow_left, x_tuck_left, y_top_top, "cut"))
+    lines.append(_hline(x_tuck_right, narrow_right, y_top_top, "cut"))
 
-    # === TOP PANEL ===
-    lines.append(_hline(x_body_left, x_body_right, y_top_panel_top, "score"))
-    lines.append(_hline(x_body_left, x_body_right, y_front_panel_top, "score"))
-    _side_flaps(lines, x_left_flap, x_body_left, x_body_right, x_right_flap,
-                y_top_panel_top, y_front_panel_top, t)
+    # === TOP PANEL === (wide body: L+T)
+    lines.append(_hline(wide_left, wide_right, y_top_top, "score"))
+    lines.append(_hline(wide_left, wide_right, y_front_top, "score"))
+    # Horizontal cuts connecting narrow tuck edge to wide top panel body
+    lines.append(_hline(wide_left, narrow_left, y_top_top, "cut"))
+    lines.append(_hline(narrow_right, wide_right, y_top_top, "cut"))
+    _side_flaps(lines, wide_left, wide_right, width_flap_w, y_top_top, y_front_top, T)
+    # Transition cuts at bottom: wide top panel to narrow front panel
+    lines.append(_hline(wide_left, narrow_left, y_front_top, "cut"))
+    lines.append(_hline(narrow_right, wide_right, y_front_top, "cut"))
 
-    # === FRONT PANEL ===
-    lines.append(_hline(x_body_left, x_body_right, y_bottom_panel_top, "score"))
-    _side_flaps(lines, x_left_flap, x_body_left, x_body_right, x_right_flap,
-                y_front_panel_top, y_bottom_panel_top, t)
+    # === FRONT PANEL === (narrow body: L)
+    lines.append(_hline(narrow_left, narrow_right, y_bottom_top, "score"))
+    _side_flaps(lines, narrow_left, narrow_right, height_flap_w, y_front_top, y_bottom_top, T)
+    # Transition cuts at bottom: narrow front to wide bottom
+    lines.append(_hline(wide_left, narrow_left, y_bottom_top, "cut"))
+    lines.append(_hline(narrow_right, wide_right, y_bottom_top, "cut"))
 
-    # === BOTTOM PANEL ===
-    lines.append(_hline(x_body_left, x_body_right, y_dust_top, "score"))
-    _side_flaps(lines, x_left_flap, x_body_left, x_body_right, x_right_flap,
-                y_bottom_panel_top, y_dust_top, t)
+    # === BOTTOM PANEL === (wide body: L+T)
+    lines.append(_hline(wide_left, wide_right, y_back_top, "score"))
+    _side_flaps(lines, wide_left, wide_right, width_flap_w, y_bottom_top, y_back_top, T)
+    # Transition cuts at bottom: wide bottom to narrow back
+    lines.append(_hline(wide_left, narrow_left, y_back_top, "cut"))
+    lines.append(_hline(narrow_right, wide_right, y_back_top, "cut"))
 
-    # === BOTTOM DUST FLAPS ===
-    # Left dust flap (inset by t at top, flush at bottom)
-    dust_flap_top = y_dust_top + t
-    lines.append(_vline(x_body_left, y_dust_top, dust_flap_top, "cut"))
-    lines.append(_hline(x_body_left, x_left_flap, dust_flap_top, "cut"))
-    lines.append(_vline(x_left_flap, dust_flap_top, y_bottom, "cut"))
-    lines.append(_hline(x_left_flap, x_body_left, y_bottom, "cut"))
+    # === BACK PANEL === (narrow body: L)
+    lines.append(_hline(narrow_left, narrow_right, y_back_bottom, "cut"))   # bottom edge
+    _side_flaps(lines, narrow_left, narrow_right, height_flap_w, y_back_top, y_back_bottom, T)
 
-    # Right dust flap
-    lines.append(_vline(x_body_right, y_dust_top, dust_flap_top, "cut"))
-    lines.append(_hline(x_body_right, x_right_flap, dust_flap_top, "cut"))
-    lines.append(_vline(x_right_flap, dust_flap_top, y_bottom, "cut"))
-    lines.append(_hline(x_right_flap, x_body_right, y_bottom, "cut"))
-
-    # Bottom edge of body
-    lines.append(_hline(x_body_left, x_body_right, y_bottom, "cut"))
-
-    # Score at dust flap fold
-    lines.append(_vline(x_body_left, dust_flap_top, y_bottom, "score"))
-    lines.append(_vline(x_body_right, dust_flap_top, y_bottom, "score"))
-
-    # Kerf compensation: expand the dieline uniformly so the laser kerf
-    # (material removed by the cut) doesn't shrink final dimensions.
+    # Kerf compensation: uniform expansion
     k = kerf / 2
     if k > 0:
         for line in lines:
