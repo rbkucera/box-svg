@@ -12,9 +12,8 @@ Layout (top to bottom in SVG):
     ─── score ───
     Back panel      L × H                side flaps: W/2 + T
 
-Side flaps are inset vertically by T with radiused corners at notch gaps.
-Top and bottom panels are wider than front/back by T to account for
-material thickness when wrapping.
+Between adjacent panels, the notch gap (2T total) is bridged by a
+single semicircle arc of radius T, curving toward the body edge.
 """
 
 from __future__ import annotations
@@ -30,62 +29,60 @@ def _vline(x: float, y1: float, y2: float, kind: str) -> Line:
     return Line(x1=x, y1=y1, x2=x, y2=y2, kind=kind)
 
 
-def _side_flaps(
+def _flap_rect(
     elements: list[Element],
     body_left: float,
     body_right: float,
     flap_w: float,
-    y_top: float,
-    y_bottom: float,
-    t: float,
+    flap_top: float,
+    flap_bot: float,
+    inset: float,
 ) -> None:
-    """Add left and right side flaps for a panel with radiused notch gaps.
+    """Draw just the rectangular part of side flaps (horizontal cuts + outer edge).
 
-    Each notch gap is t tall. A single semicircle of radius t/2 fills
-    the gap, connecting the horizontal flap edge to the panel boundary.
-    The semicircle curves inward toward the body edge (score line).
+    Horizontal cuts end at `inset` distance from the body edge, leaving
+    room for the arc that will be drawn separately.
     """
     x_left_flap = body_left - flap_w
     x_right_flap = body_right + flap_w
-    flap_top = y_top + t
-    flap_bot = y_bottom - t
-    r = t / 2  # semicircle radius = half the notch gap
 
-    # --- LEFT FLAP ---
-    # Top notch: semicircle from panel boundary to flap top, curving toward body
-    elements.append(Arc(x1=body_left - r, y1=y_top,
-                        x2=body_left - r, y2=flap_top,
-                        r=r, sweep=0, kind="cut"))
-    elements.append(_hline(body_left - r, x_left_flap, flap_top, "cut"))
-
-    # Left flap outer edge
+    # Left flap
+    elements.append(_hline(body_left - inset, x_left_flap, flap_top, "cut"))
     elements.append(_vline(x_left_flap, flap_top, flap_bot, "cut"))
+    elements.append(_hline(x_left_flap, body_left - inset, flap_bot, "cut"))
 
-    # Bottom notch: flap bottom to panel boundary, curving toward body
-    elements.append(_hline(x_left_flap, body_left - r, flap_bot, "cut"))
-    elements.append(Arc(x1=body_left - r, y1=flap_bot,
-                        x2=body_left - r, y2=y_bottom,
-                        r=r, sweep=0, kind="cut"))
-
-    # --- RIGHT FLAP ---
-    # Top notch
-    elements.append(Arc(x1=body_right + r, y1=y_top,
-                        x2=body_right + r, y2=flap_top,
-                        r=r, sweep=1, kind="cut"))
-    elements.append(_hline(body_right + r, x_right_flap, flap_top, "cut"))
-
-    # Right flap outer edge
+    # Right flap
+    elements.append(_hline(body_right + inset, x_right_flap, flap_top, "cut"))
     elements.append(_vline(x_right_flap, flap_top, flap_bot, "cut"))
+    elements.append(_hline(x_right_flap, body_right + inset, flap_bot, "cut"))
 
-    # Bottom notch
-    elements.append(_hline(x_right_flap, body_right + r, flap_bot, "cut"))
-    elements.append(Arc(x1=body_right + r, y1=flap_bot,
-                        x2=body_right + r, y2=y_bottom,
-                        r=r, sweep=1, kind="cut"))
 
-    # Score lines at flap fold edges (full panel height)
-    elements.append(_vline(body_left, y_top, y_bottom, "score"))
-    elements.append(_vline(body_right, y_top, y_bottom, "score"))
+def _notch_arc(
+    elements: list[Element],
+    x: float,
+    y_upper: float,
+    y_lower: float,
+    side: str,
+) -> None:
+    """Draw a single semicircle arc connecting two flap edges at a notch gap.
+
+    The arc connects (x, y_upper) to (x, y_lower), curving toward the
+    body edge (right for left-side flaps, left for right-side flaps).
+
+    Args:
+        x: x-coordinate of both arc endpoints (where horizontal cuts end)
+        y_upper: y of the upper flap's bottom edge
+        y_lower: y of the lower flap's top edge
+        side: "left" or "right" — determines curve direction
+    """
+    r = (y_lower - y_upper) / 2
+    if r <= 0:
+        return
+    # Left side: arc curves RIGHT (toward body). sweep=1 (CW: right then down)
+    # Right side: arc curves LEFT (toward body). sweep=0 (CCW: left then down)
+    sweep = 1 if side == "left" else 0
+    elements.append(Arc(x1=x, y1=y_upper, x2=x, y2=y_lower,
+                        r=r, sweep=sweep, kind="cut"))
 
 
 def generate_mailer_dieline(request: BoxRequest) -> Dieline:
@@ -109,6 +106,9 @@ def generate_mailer_dieline(request: BoxRequest) -> Dieline:
     # Side flap widths (vary by panel type)
     height_flap_w = W / 2 + T    # for height panels (front, back)
     width_flap_w = H / 2 + T     # for width panels (top, bottom)
+
+    # Arc inset: how far from body edge the horizontal cuts end (= semicircle radius)
+    arc_inset = T  # radius of the between-panel semicircle
 
     # Total dieline height
     total_h = tuck_h + top_panel_h + front_panel_h + bottom_panel_h + back_panel_h
@@ -135,53 +135,111 @@ def generate_mailer_dieline(request: BoxRequest) -> Dieline:
     y_back_top = y_bottom_top + bottom_panel_h
     y_back_bottom = total_h
 
+    # Flap edges (inset by T from panel boundaries)
+    top_flap_top = y_top_top + T
+    top_flap_bot = y_front_top - T
+    front_flap_top = y_front_top + T
+    front_flap_bot = y_bottom_top - T
+    bottom_flap_top = y_bottom_top + T
+    bottom_flap_bot = y_back_top - T
+    back_flap_top = y_back_top + T
+    back_flap_bot = y_back_bottom - T
+
     elements: list[Element] = []
 
     # === TUCK FLAP (tapered trapezoid) ===
     tuck_base_inset = T
-    tuck_taper = H / 8  # additional inset at the top edge
+    tuck_taper = H / 8
     x_tuck_base_left = narrow_left + tuck_base_inset
     x_tuck_base_right = narrow_right - tuck_base_inset
     x_tuck_tip_left = narrow_left + tuck_base_inset + tuck_taper
     x_tuck_tip_right = narrow_right - tuck_base_inset - tuck_taper
 
-    elements.append(_hline(x_tuck_tip_left, x_tuck_tip_right, y_tuck_top, "cut"))  # top edge
+    elements.append(_hline(x_tuck_tip_left, x_tuck_tip_right, y_tuck_top, "cut"))
     elements.append(Line(x1=x_tuck_tip_left, y1=y_tuck_top,
-                         x2=x_tuck_base_left, y2=y_top_top, kind="cut"))            # left taper
+                         x2=x_tuck_base_left, y2=y_top_top, kind="cut"))
     elements.append(Line(x1=x_tuck_tip_right, y1=y_tuck_top,
-                         x2=x_tuck_base_right, y2=y_top_top, kind="cut"))           # right taper
-    # Horizontal cuts connecting tuck base to top panel body
+                         x2=x_tuck_base_right, y2=y_top_top, kind="cut"))
     elements.append(_hline(narrow_left, x_tuck_base_left, y_top_top, "cut"))
     elements.append(_hline(x_tuck_base_right, narrow_right, y_top_top, "cut"))
 
-    # === TOP PANEL === (wide body: L+T)
+    # === PANEL SCORE LINES ===
     elements.append(_hline(wide_left, wide_right, y_top_top, "score"))
     elements.append(_hline(wide_left, wide_right, y_front_top, "score"))
-    # Horizontal cuts: narrow tuck edge to wide top panel body
+    elements.append(_hline(narrow_left, narrow_right, y_bottom_top, "score"))
+    elements.append(_hline(wide_left, wide_right, y_back_top, "score"))
+
+    # === TRANSITION CUTS (wide ↔ narrow body) ===
     elements.append(_hline(wide_left, narrow_left, y_top_top, "cut"))
     elements.append(_hline(narrow_right, wide_right, y_top_top, "cut"))
-    _side_flaps(elements, wide_left, wide_right, width_flap_w, y_top_top, y_front_top, T)
-    # Transition cuts: wide top panel to narrow front panel
     elements.append(_hline(wide_left, narrow_left, y_front_top, "cut"))
     elements.append(_hline(narrow_right, wide_right, y_front_top, "cut"))
-
-    # === FRONT PANEL === (narrow body: L)
-    elements.append(_hline(narrow_left, narrow_right, y_bottom_top, "score"))
-    _side_flaps(elements, narrow_left, narrow_right, height_flap_w, y_front_top, y_bottom_top, T)
-    # Transition cuts: narrow front to wide bottom
     elements.append(_hline(wide_left, narrow_left, y_bottom_top, "cut"))
     elements.append(_hline(narrow_right, wide_right, y_bottom_top, "cut"))
-
-    # === BOTTOM PANEL === (wide body: L+T)
-    elements.append(_hline(wide_left, wide_right, y_back_top, "score"))
-    _side_flaps(elements, wide_left, wide_right, width_flap_w, y_bottom_top, y_back_top, T)
-    # Transition cuts: wide bottom to narrow back
     elements.append(_hline(wide_left, narrow_left, y_back_top, "cut"))
     elements.append(_hline(narrow_right, wide_right, y_back_top, "cut"))
 
-    # === BACK PANEL === (narrow body: L)
-    elements.append(_hline(narrow_left, narrow_right, y_back_bottom, "cut"))  # bottom edge
-    _side_flaps(elements, narrow_left, narrow_right, height_flap_w, y_back_top, y_back_bottom, T)
+    # === BACK PANEL BOTTOM EDGE ===
+    elements.append(_hline(narrow_left, narrow_right, y_back_bottom, "cut"))
+
+    # === FLAP RECTANGLES (horizontal cuts + outer edges, no arcs) ===
+    _flap_rect(elements, wide_left, wide_right, width_flap_w,
+               top_flap_top, top_flap_bot, arc_inset)
+    _flap_rect(elements, narrow_left, narrow_right, height_flap_w,
+               front_flap_top, front_flap_bot, arc_inset)
+    _flap_rect(elements, wide_left, wide_right, width_flap_w,
+               bottom_flap_top, bottom_flap_bot, arc_inset)
+    _flap_rect(elements, narrow_left, narrow_right, height_flap_w,
+               back_flap_top, back_flap_bot, arc_inset)
+
+    # === SCORE LINES along body edges (full panel height per panel) ===
+    for body_l, body_r, yt, yb in [
+        (wide_left, wide_right, y_top_top, y_front_top),
+        (narrow_left, narrow_right, y_front_top, y_bottom_top),
+        (wide_left, wide_right, y_bottom_top, y_back_top),
+        (narrow_left, narrow_right, y_back_top, y_back_bottom),
+    ]:
+        elements.append(_vline(body_l, yt, yb, "score"))
+        elements.append(_vline(body_r, yt, yb, "score"))
+
+    # === SEMICIRCLE ARCS between adjacent panels' flaps ===
+    # Each boundary has a 2T gap. Arc radius = T.
+    # The arc x-position uses the leftmost (for left) body edge minus T.
+
+    # Between top panel and front panel (y_front_top)
+    # top panel: wide body, front panel: narrow body
+    # Left: use wide_left (further left), so arc x = wide_left - T
+    # Right: use wide_right (further right), so arc x = wide_right + T
+    arc_x_left = wide_left - arc_inset
+    arc_x_right = wide_right + arc_inset
+    _notch_arc(elements, arc_x_left, top_flap_bot, front_flap_top, "left")
+    _notch_arc(elements, arc_x_right, top_flap_bot, front_flap_top, "right")
+
+    # Between front panel and bottom panel (y_bottom_top)
+    # front: narrow, bottom: wide — wide is further left
+    arc_x_left = wide_left - arc_inset
+    arc_x_right = wide_right + arc_inset
+    _notch_arc(elements, arc_x_left, front_flap_bot, bottom_flap_top, "left")
+    _notch_arc(elements, arc_x_right, front_flap_bot, bottom_flap_top, "right")
+
+    # Between bottom panel and back panel (y_back_top)
+    # bottom: wide, back: narrow — wide is further left
+    arc_x_left = wide_left - arc_inset
+    arc_x_right = wide_right + arc_inset
+    _notch_arc(elements, arc_x_left, bottom_flap_bot, back_flap_top, "left")
+    _notch_arc(elements, arc_x_right, bottom_flap_bot, back_flap_top, "right")
+
+    # Top edge of top panel (only one flap edge, T gap, radius T/2)
+    arc_x_left = wide_left - arc_inset
+    arc_x_right = wide_right + arc_inset
+    _notch_arc(elements, arc_x_left, y_top_top, top_flap_top, "left")
+    _notch_arc(elements, arc_x_right, y_top_top, top_flap_top, "right")
+
+    # Bottom edge of back panel (only one flap edge, T gap, radius T/2)
+    arc_x_left = narrow_left - arc_inset
+    arc_x_right = narrow_right + arc_inset
+    _notch_arc(elements, arc_x_left, back_flap_bot, y_back_bottom, "left")
+    _notch_arc(elements, arc_x_right, back_flap_bot, y_back_bottom, "right")
 
     # Kerf compensation: uniform expansion
     k = kerf / 2
