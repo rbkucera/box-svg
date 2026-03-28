@@ -41,48 +41,49 @@ def _side_flaps(
 ) -> None:
     """Add left and right side flaps for a panel with radiused notch gaps.
 
-    The notch gap is t tall. Each corner gets a quarter-circle arc with
-    radius r = t, connecting the body edge directly to the flap edge.
+    Each notch gap is t tall. A single semicircle of radius t/2 fills
+    the gap, connecting the horizontal flap edge to the panel boundary.
+    The semicircle curves inward toward the body edge (score line).
     """
     x_left_flap = body_left - flap_w
     x_right_flap = body_right + flap_w
     flap_top = y_top + t
     flap_bot = y_bottom - t
-    r = t  # arc radius = notch gap size
+    r = t / 2  # semicircle radius = half the notch gap
 
     # --- LEFT FLAP ---
-    # Top-left notch: arc from body edge at score line curving to flap top
-    elements.append(Arc(x1=body_left, y1=y_top,
+    # Top notch: semicircle from panel boundary to flap top, curving toward body
+    elements.append(Arc(x1=body_left - r, y1=y_top,
                         x2=body_left - r, y2=flap_top,
-                        r=r, sweep=1, kind="cut"))
+                        r=r, sweep=0, kind="cut"))
     elements.append(_hline(body_left - r, x_left_flap, flap_top, "cut"))
 
     # Left flap outer edge
     elements.append(_vline(x_left_flap, flap_top, flap_bot, "cut"))
 
-    # Bottom-left notch: flap bottom curving back to body edge at score line
+    # Bottom notch: flap bottom to panel boundary, curving toward body
     elements.append(_hline(x_left_flap, body_left - r, flap_bot, "cut"))
     elements.append(Arc(x1=body_left - r, y1=flap_bot,
-                        x2=body_left, y2=y_bottom,
-                        r=r, sweep=1, kind="cut"))
+                        x2=body_left - r, y2=y_bottom,
+                        r=r, sweep=0, kind="cut"))
 
     # --- RIGHT FLAP ---
-    # Top-right notch
-    elements.append(Arc(x1=body_right, y1=y_top,
+    # Top notch
+    elements.append(Arc(x1=body_right + r, y1=y_top,
                         x2=body_right + r, y2=flap_top,
-                        r=r, sweep=0, kind="cut"))
+                        r=r, sweep=1, kind="cut"))
     elements.append(_hline(body_right + r, x_right_flap, flap_top, "cut"))
 
     # Right flap outer edge
     elements.append(_vline(x_right_flap, flap_top, flap_bot, "cut"))
 
-    # Bottom-right notch
+    # Bottom notch
     elements.append(_hline(x_right_flap, body_right + r, flap_bot, "cut"))
     elements.append(Arc(x1=body_right + r, y1=flap_bot,
-                        x2=body_right, y2=y_bottom,
-                        r=r, sweep=0, kind="cut"))
+                        x2=body_right + r, y2=y_bottom,
+                        r=r, sweep=1, kind="cut"))
 
-    # Score lines at flap fold edges (full panel height — arcs branch off from these)
+    # Score lines at flap fold edges (full panel height)
     elements.append(_vline(body_left, y_top, y_bottom, "score"))
     elements.append(_vline(body_right, y_top, y_bottom, "score"))
 
