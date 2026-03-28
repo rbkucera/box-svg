@@ -36,25 +36,27 @@ def _flap_rect(
     flap_w: float,
     flap_top: float,
     flap_bot: float,
-    inset: float,
+    inset_top: float,
+    inset_bot: float,
 ) -> None:
     """Draw just the rectangular part of side flaps (horizontal cuts + outer edge).
 
     Horizontal cuts end at `inset` distance from the body edge, leaving
-    room for the arc that will be drawn separately.
+    room for the arc that will be drawn separately. Top and bottom insets
+    may differ (edge arcs vs internal arcs have different radii).
     """
     x_left_flap = body_left - flap_w
     x_right_flap = body_right + flap_w
 
     # Left flap
-    elements.append(_hline(body_left - inset, x_left_flap, flap_top, "cut"))
+    elements.append(_hline(body_left - inset_top, x_left_flap, flap_top, "cut"))
     elements.append(_vline(x_left_flap, flap_top, flap_bot, "cut"))
-    elements.append(_hline(x_left_flap, body_left - inset, flap_bot, "cut"))
+    elements.append(_hline(x_left_flap, body_left - inset_bot, flap_bot, "cut"))
 
     # Right flap
-    elements.append(_hline(body_right + inset, x_right_flap, flap_top, "cut"))
+    elements.append(_hline(body_right + inset_top, x_right_flap, flap_top, "cut"))
     elements.append(_vline(x_right_flap, flap_top, flap_bot, "cut"))
-    elements.append(_hline(x_right_flap, body_right + inset, flap_bot, "cut"))
+    elements.append(_hline(x_right_flap, body_right + inset_bot, flap_bot, "cut"))
 
 
 def _notch_arc(
@@ -183,14 +185,16 @@ def generate_mailer_dieline(request: BoxRequest) -> Dieline:
     elements.append(_hline(narrow_left, narrow_right, y_back_bottom, "cut"))
 
     # === FLAP RECTANGLES (horizontal cuts + outer edges, no arcs) ===
+    # Insets: T for internal boundaries (2T gap, radius T), T/2 for edges (T gap, radius T/2)
+    edge_inset = T / 2
     _flap_rect(elements, wide_left, wide_right, width_flap_w,
-               top_flap_top, top_flap_bot, arc_inset)
+               top_flap_top, top_flap_bot, edge_inset, arc_inset)     # top=edge, bot=internal
     _flap_rect(elements, narrow_left, narrow_right, height_flap_w,
-               front_flap_top, front_flap_bot, arc_inset)
+               front_flap_top, front_flap_bot, arc_inset, arc_inset)  # both internal
     _flap_rect(elements, wide_left, wide_right, width_flap_w,
-               bottom_flap_top, bottom_flap_bot, arc_inset)
+               bottom_flap_top, bottom_flap_bot, arc_inset, arc_inset) # both internal
     _flap_rect(elements, narrow_left, narrow_right, height_flap_w,
-               back_flap_top, back_flap_bot, arc_inset)
+               back_flap_top, back_flap_bot, arc_inset, edge_inset)   # top=internal, bot=edge
 
     # === SCORE LINES along body edges (full panel height per panel) ===
     for body_l, body_r, yt, yb in [
@@ -230,14 +234,14 @@ def generate_mailer_dieline(request: BoxRequest) -> Dieline:
     _notch_arc(elements, arc_x_right, bottom_flap_bot, back_flap_top, "right")
 
     # Top edge of top panel (only one flap edge, T gap, radius T/2)
-    arc_x_left = wide_left - arc_inset
-    arc_x_right = wide_right + arc_inset
+    arc_x_left = wide_left - edge_inset
+    arc_x_right = wide_right + edge_inset
     _notch_arc(elements, arc_x_left, y_top_top, top_flap_top, "left")
     _notch_arc(elements, arc_x_right, y_top_top, top_flap_top, "right")
 
     # Bottom edge of back panel (only one flap edge, T gap, radius T/2)
-    arc_x_left = narrow_left - arc_inset
-    arc_x_right = narrow_right + arc_inset
+    arc_x_left = narrow_left - edge_inset
+    arc_x_right = narrow_right + edge_inset
     _notch_arc(elements, arc_x_left, back_flap_bot, y_back_bottom, "left")
     _notch_arc(elements, arc_x_right, back_flap_bot, y_back_bottom, "right")
 
