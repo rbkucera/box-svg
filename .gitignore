@@ -9,3 +9,5 @@ build/
 venv/
 *.svg
 !tests/fixtures/*.svg
+web/node_modules/
+web/dist/
