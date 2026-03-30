@@ -59,8 +59,8 @@ def generate_mailer_dieline(request: BoxRequest) -> Dieline:
     wide_body = L + T
 
     # Side flap widths
-    height_flap_w = W / 2 + T    # front, back
-    width_flap_w = H / 2 + T     # top, bottom
+    height_flap_w = W / 2    # front, back
+    width_flap_w = H / 2     # top, bottom
 
     # Total dieline
     total_h = tuck_h + top_panel_h + front_panel_h + bottom_panel_h + back_panel_h

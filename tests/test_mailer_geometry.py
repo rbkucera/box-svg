@@ -35,7 +35,9 @@ def test_dieline_dimensions():
     T = 0.125
     expected_h = 3.5/2 + (2.0 + T/2) + 3.5 + 2.0 + 3.5
     assert result.height == pytest.approx(expected_h)
-    expected_w = max(6.0 + 2.0 + 2*T, 6.0 + 3.5 + 3*T)
+    # Width panels: (H/2) + (L+T) + (H/2) = L + H + T
+    # Height panels: (W/2) + L + (W/2) = L + W
+    expected_w = max(6.0 + 2.0, 6.0 + 3.5 + T)
     assert result.width == pytest.approx(expected_w)
 
 
