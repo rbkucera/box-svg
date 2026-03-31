@@ -1,6 +1,6 @@
 import type { BoxRequest, Dieline, Element } from "../models";
-import { effectiveThickness, effectiveKerf } from "../models";
-import { hline, vline, pathFromPoints, applyKerf } from "./helpers";
+import { effectiveThickness, effectiveKerf, resolveEmbellishments } from "../models";
+import { hline, vline, pathFromPoints, roundedCorner, applyKerf } from "./helpers";
 import {
   TUCKTOP_DUST_DEPTH_RATIO,
   TUCKTOP_TUCK_DEPTH_RATIO,
@@ -37,6 +37,7 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
   const height = request.height;
   const thickness = effectiveThickness(request);
   const kerf = effectiveKerf(request);
+  const emb = resolveEmbellishments(request);
 
   const glueW = glueTabWidth(width, thickness);
   const dustDepth = width * TUCKTOP_DUST_DEPTH_RATIO;
@@ -64,74 +65,56 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
 
   const elements: Element[] = [];
 
-  // Glue tab with beveled ends
-  elements.push(...pathFromPoints([
-    [x1, y2],
-    [x0, y2 + glueBevel],
-    [x0, y3 - glueBevel],
-    [x1, y3],
-  ], "cut"));
+  const glueR = emb.glueTabCornerRadius;
+  const tuckR = emb.tuckCornerRadius;
+  const dustR = emb.dustFlapCornerRadius;
+
+  // Glue tab with beveled ends (optionally rounded)
+  elements.push(...roundedCorner(
+    x1, y2,  x0, y2 + glueBevel,  x0, y3 - glueBevel,
+    glueR, "cut",
+  ));
+  elements.push(...roundedCorner(
+    x0, y2 + glueBevel,  x0, y3 - glueBevel,  x1, y3,
+    glueR, "cut",
+  ));
 
   // Body outer edge on the back panel side
   elements.push(vline(x5, y2, y3, "cut"));
 
   // Top tuck flap + top closure panel on the rear panel
-  elements.push(...pathFromPoints([
-    [x1, y2],
-    [x1, y1],
-    [x1 + tuckInset, y0],
-    [x2 - tuckInset, y0],
-    [x2, y1],
-    [x2, y2],
-  ], "cut"));
+  elements.push(...pathFromPoints([[x1, y2], [x1, y1]], "cut"));
+  elements.push(...roundedCorner(x1, y1, x1 + tuckInset, y0, x2 - tuckInset, y0, tuckR, "cut"));
+  elements.push(...roundedCorner(x1 + tuckInset, y0, x2 - tuckInset, y0, x2, y1, tuckR, "cut"));
+  elements.push(...pathFromPoints([[x2, y1], [x2, y2]], "cut"));
 
   // Top dust flap on first side panel
-  elements.push(...pathFromPoints([
-    [x2, y2],
-    [x2 + dustTaper, y2 - dustDepth],
-    [x3 - dustTaper, y2 - dustDepth],
-    [x3, y2],
-  ], "cut"));
+  elements.push(...roundedCorner(x2, y2, x2 + dustTaper, y2 - dustDepth, x3 - dustTaper, y2 - dustDepth, dustR, "cut"));
+  elements.push(...roundedCorner(x2 + dustTaper, y2 - dustDepth, x3 - dustTaper, y2 - dustDepth, x3, y2, dustR, "cut"));
 
   // Front panel top edge (open cut)
   elements.push(hline(x3, x4, y2, "cut"));
 
   // Top dust flap on second side panel
-  elements.push(...pathFromPoints([
-    [x4, y2],
-    [x4 + dustTaper, y2 - dustDepth],
-    [x5 - dustTaper, y2 - dustDepth],
-    [x5, y2],
-  ], "cut"));
+  elements.push(...roundedCorner(x4, y2, x4 + dustTaper, y2 - dustDepth, x5 - dustTaper, y2 - dustDepth, dustR, "cut"));
+  elements.push(...roundedCorner(x4 + dustTaper, y2 - dustDepth, x5 - dustTaper, y2 - dustDepth, x5, y2, dustR, "cut"));
 
   // Rear panel bottom edge (open cut)
   elements.push(hline(x1, x2, y3, "cut"));
 
   // Bottom dust flap on first side panel
-  elements.push(...pathFromPoints([
-    [x2, y3],
-    [x2 + dustTaper, y3 + dustDepth],
-    [x3 - dustTaper, y3 + dustDepth],
-    [x3, y3],
-  ], "cut"));
+  elements.push(...roundedCorner(x2, y3, x2 + dustTaper, y3 + dustDepth, x3 - dustTaper, y3 + dustDepth, dustR, "cut"));
+  elements.push(...roundedCorner(x2 + dustTaper, y3 + dustDepth, x3 - dustTaper, y3 + dustDepth, x3, y3, dustR, "cut"));
 
   // Bottom tuck flap + bottom closure panel on the front panel
-  elements.push(...pathFromPoints([
-    [x3, y3],
-    [x3, y4],
-    [x3 + tuckInset, y5],
-    [x4 - tuckInset, y5],
-    [x4, y4],
-    [x4, y3],
-  ], "cut"));
+  elements.push(...pathFromPoints([[x3, y3], [x3, y4]], "cut"));
+  elements.push(...roundedCorner(x3, y4, x3 + tuckInset, y5, x4 - tuckInset, y5, tuckR, "cut"));
+  elements.push(...roundedCorner(x3 + tuckInset, y5, x4 - tuckInset, y5, x4, y4, tuckR, "cut"));
+  elements.push(...pathFromPoints([[x4, y4], [x4, y3]], "cut"));
 
   // Bottom dust flap on second side panel
-  elements.push(...pathFromPoints([
-    [x4, y3],
-    [x4 + dustTaper, y3 + dustDepth],
-    [x5 - dustTaper, y3 + dustDepth],
-    [x5, y3],
-  ], "cut"));
+  elements.push(...roundedCorner(x4, y3, x4 + dustTaper, y3 + dustDepth, x5 - dustTaper, y3 + dustDepth, dustR, "cut"));
+  elements.push(...roundedCorner(x4 + dustTaper, y3 + dustDepth, x5 - dustTaper, y3 + dustDepth, x5, y3, dustR, "cut"));
 
   // Score lines: vertical body folds
   for (const x of [x1, x2, x3, x4]) {

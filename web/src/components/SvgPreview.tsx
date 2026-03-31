@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
-import type { Dieline } from "../core/models";
+import type { Dieline, Element } from "../core/models";
 
 const PPI = 96;
 const CUT_COLOR = "#00FF00";
@@ -20,26 +20,42 @@ interface ViewportMetrics {
   clientHeight: number;
 }
 
+function RenderElement({ el, maxX }: { el: Element; maxX: number }) {
+  // Rotate 90° CCW: (x,y) → (y*PPI, maxX - x*PPI)
+  const rx = (_x: number, y: number) => y * PPI;
+  const ry = (x: number, _y: number) => maxX - x * PPI;
+
+  if (el.type === "arc") {
+    const sx1 = rx(el.x1, el.y1), sy1 = ry(el.x1, el.y1);
+    const sx2 = rx(el.x2, el.y2), sy2 = ry(el.x2, el.y2);
+    const rPx = el.r * PPI;
+    // Flip sweep when rotating 90° CCW
+    const sweep = el.sweep === 0 ? 1 : 0;
+    return (
+      <path d={`M ${sx1},${sy1} A ${rPx},${rPx} 0 0,${sweep} ${sx2},${sy2}`} />
+    );
+  }
+
+  return (
+    <line
+      x1={rx(el.x1, el.y1)}
+      y1={ry(el.x1, el.y1)}
+      x2={rx(el.x2, el.y2)}
+      y2={ry(el.x2, el.y2)}
+    />
+  );
+}
+
 function DielineDrawing({ dieline }: { dieline: Dieline }) {
   const cutElements = dieline.elements.filter((el) => el.kind === "cut");
   const scoreElements = dieline.elements.filter((el) => el.kind === "score");
-
-  // Rotate 90 degrees CCW by swapping coordinates: (x,y) -> (y, maxX - x)
   const maxX = dieline.width * PPI;
-  const rx = (_x: number, y: number) => y * PPI;
-  const ry = (x: number, _y: number) => maxX - x * PPI;
 
   return (
     <>
       <g id="cut" stroke={CUT_COLOR} strokeWidth={STROKE_WIDTH} fill="none">
         {cutElements.map((el, i) => (
-          <line
-            key={`cut-${i}`}
-            x1={rx(el.x1, el.y1)}
-            y1={ry(el.x1, el.y1)}
-            x2={rx(el.x2, el.y2)}
-            y2={ry(el.x2, el.y2)}
-          />
+          <RenderElement key={`cut-${i}`} el={el} maxX={maxX} />
         ))}
       </g>
       <g
@@ -50,13 +66,7 @@ function DielineDrawing({ dieline }: { dieline: Dieline }) {
         fill="none"
       >
         {scoreElements.map((el, i) => (
-          <line
-            key={`score-${i}`}
-            x1={rx(el.x1, el.y1)}
-            y1={ry(el.x1, el.y1)}
-            x2={rx(el.x2, el.y2)}
-            y2={ry(el.x2, el.y2)}
-          />
+          <RenderElement key={`score-${i}`} el={el} maxX={maxX} />
         ))}
       </g>
     </>

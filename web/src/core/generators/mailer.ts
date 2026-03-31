@@ -1,6 +1,6 @@
 import type { BoxRequest, Dieline, Element } from "../models";
-import { effectiveThickness, effectiveKerf } from "../models";
-import { hline, vline, pathFromPoints, applyKerf } from "./helpers";
+import { effectiveThickness, effectiveKerf, resolveEmbellishments } from "../models";
+import { hline, vline, pathFromPoints, roundedCorner, applyKerf } from "./helpers";
 import {
   MAILER_TUCK_DEPTH_RATIO,
   MAILER_TUCK_TAPER_RATIO,
@@ -9,12 +9,60 @@ import {
   MAILER_BEVEL_INSET_MULTIPLIER,
 } from "./proportions";
 
+/**
+ * Emit one side flap as a continuous path:
+ *   score line → bevel → flap top → outer edge → flap bot → bevel → score line
+ *
+ * The 7 points define the path. roundedCorner is applied at the 5 interior
+ * corners (bevel-in, top-outer, top-outer-to-edge, bot-outer, bevel-out).
+ * With all radii=0, this produces the same straight-line path as before.
+ */
+function sideFlap(
+  bodyTop: number, bodyBot: number,
+  bevelTop: number, bevelBot: number,
+  flapOuter: number,
+  ft: number, fb: number,
+  yScoreTop: number, yScoreBot: number,
+  flapR: number, bevelR: number,
+  kind: "cut" | "score",
+): Element[] {
+  // The 7 waypoints of the flap path
+  const pts: [number, number][] = [
+    [bodyTop, yScoreTop],    // 0: start at score line
+    [bevelTop, ft],          // 1: bevel corner (in)
+    [flapOuter, ft],         // 2: flap top-outer corner
+    [flapOuter, fb],         // 3: flap bot-outer corner
+    [bevelBot, fb],          // 4: bevel corner (out)
+    [bodyBot, yScoreBot],    // 5: end at score line
+  ];
+
+  // Radii for each interior corner (indices 1-4)
+  const radii = [bevelR, flapR, flapR, bevelR];
+
+  const els: Element[] = [];
+  // Emit the path with rounded corners at interior points
+  let prevEnd = pts[0];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const corner = pts[i];
+    const next = pts[i + 1];
+    const r = radii[i - 1];
+    const seg = roundedCorner(prevEnd[0], prevEnd[1], corner[0], corner[1], next[0], next[1], r, kind);
+    els.push(...seg);
+    // The last element's endpoint is our new prevEnd
+    const last = seg[seg.length - 1];
+    prevEnd = [last.x2, last.y2];
+  }
+
+  return els;
+}
+
 export function generateMailerDieline(request: BoxRequest): Dieline {
   const L = request.length;
   const W = request.width;
   const H = request.height;
   const T = effectiveThickness(request);
   const kerf = effectiveKerf(request);
+  const emb = resolveEmbellishments(request);
 
   // Panel heights
   const tuckH = H * MAILER_TUCK_DEPTH_RATIO;
@@ -63,14 +111,14 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   const backFb = yEnd - T;
 
   // Flap outer x positions
-  const topFlapLeft = wideLeft - widthFlapW;
   const topFlapRight = wideRight + widthFlapW;
-  const frontFlapLeft = narrowLeft - heightFlapW;
   const frontFlapRight = narrowRight + heightFlapW;
-  const bottomFlapLeft = wideLeft - widthFlapW;
   const bottomFlapRight = wideRight + widthFlapW;
-  const backFlapLeft = narrowLeft - heightFlapW;
   const backFlapRight = narrowRight + heightFlapW;
+  const topFlapLeft = wideLeft - widthFlapW;
+  const frontFlapLeft = narrowLeft - heightFlapW;
+  const bottomFlapLeft = wideLeft - widthFlapW;
+  const backFlapLeft = narrowLeft - heightFlapW;
 
   // Tuck flap geometry
   const tuckBaseInset = T;
@@ -80,85 +128,135 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   const tuckTl = tuckBl + tuckTaper;
   const tuckTr = tuckBr - tuckTaper;
 
+  // Embellishment radii
+  const flapR = emb.flapCornerRadius;
+  const bevelR = emb.bevelRadius;
+  const tuckR = emb.tuckCornerRadius;
+
   const elements: Element[] = [];
 
-  // === CUT OUTLINE — one continuous path ===
+  // === CUT OUTLINE ===
 
-  // --- TUCK ---
+  // --- TUCK (with optional rounded tip corners) ---
+  elements.push(...roundedCorner(
+    tuckTl, 0,  tuckTr, 0,  tuckBr, yTop,
+    tuckR, "cut",
+  ));
   elements.push(...pathFromPoints([
-    [tuckTl, 0],
-    [tuckTr, 0],
     [tuckBr, yTop],
     [narrowRight, yTop],
     [wideRight, yTop],
   ], "cut"));
 
   // --- RIGHT SIDE (going down) ---
+  // Top panel flap
+  elements.push(...sideFlap(
+    wideRight, wideRight,
+    wideRight + bevel, wideRight + bevel,
+    topFlapRight, topFt, topFb, yTop, yFront,
+    flapR, bevelR, "cut",
+  ));
+
+  // Transition: wide → narrow
   elements.push(...pathFromPoints([
-    [wideRight, yTop],
-    [wideRight + bevel, topFt],
-    [topFlapRight, topFt],
-    [topFlapRight, topFb],
-    [wideRight + bevel, topFb],
-    [wideRight, yFront],
-    [narrowRight, yFront],
-    [narrowRight + bevel, frontFt],
-    [frontFlapRight, frontFt],
-    [frontFlapRight, frontFb],
-    [narrowRight + bevel, frontFb],
-    [narrowRight, yBottom],
-    [wideRight, yBottom],
-    [wideRight + bevel, bottomFt],
-    [bottomFlapRight, bottomFt],
-    [bottomFlapRight, bottomFb],
-    [wideRight + bevel, bottomFb],
-    [wideRight, yBack],
-    [narrowRight, yBack],
-    [narrowRight + bevel, backFt],
-    [backFlapRight, backFt],
-    [backFlapRight, backFb],
-    [narrowRight + bevel, backFb],
-    [narrowRight, yEnd],
+    [wideRight, yFront], [narrowRight, yFront],
   ], "cut"));
+
+  // Front panel flap
+  elements.push(...sideFlap(
+    narrowRight, narrowRight,
+    narrowRight + bevel, narrowRight + bevel,
+    frontFlapRight, frontFt, frontFb, yFront, yBottom,
+    flapR, bevelR, "cut",
+  ));
+
+  // Transition: narrow → wide
+  elements.push(...pathFromPoints([
+    [narrowRight, yBottom], [wideRight, yBottom],
+  ], "cut"));
+
+  // Bottom panel flap
+  elements.push(...sideFlap(
+    wideRight, wideRight,
+    wideRight + bevel, wideRight + bevel,
+    bottomFlapRight, bottomFt, bottomFb, yBottom, yBack,
+    flapR, bevelR, "cut",
+  ));
+
+  // Transition: wide → narrow
+  elements.push(...pathFromPoints([
+    [wideRight, yBack], [narrowRight, yBack],
+  ], "cut"));
+
+  // Back panel flap
+  elements.push(...sideFlap(
+    narrowRight, narrowRight,
+    narrowRight + bevel, narrowRight + bevel,
+    backFlapRight, backFt, backFb, yBack, yEnd,
+    flapR, bevelR, "cut",
+  ));
 
   // --- BOTTOM EDGE ---
   elements.push(hline(narrowRight, narrowLeft, yEnd, "cut"));
 
-  // --- LEFT SIDE (going up) ---
+  // --- LEFT SIDE (going up, mirrored) ---
+  // Back panel flap (left)
+  elements.push(...sideFlap(
+    narrowLeft, narrowLeft,
+    narrowLeft - bevel, narrowLeft - bevel,
+    backFlapLeft, backFb, backFt, yEnd, yBack,
+    flapR, bevelR, "cut",
+  ));
+
+  // Transition: narrow → wide
   elements.push(...pathFromPoints([
-    [narrowLeft, yEnd],
-    [narrowLeft - bevel, backFb],
-    [backFlapLeft, backFb],
-    [backFlapLeft, backFt],
-    [narrowLeft - bevel, backFt],
-    [narrowLeft, yBack],
-    [wideLeft, yBack],
-    [wideLeft - bevel, bottomFb],
-    [bottomFlapLeft, bottomFb],
-    [bottomFlapLeft, bottomFt],
-    [wideLeft - bevel, bottomFt],
-    [wideLeft, yBottom],
-    [narrowLeft, yBottom],
-    [narrowLeft - bevel, frontFb],
-    [frontFlapLeft, frontFb],
-    [frontFlapLeft, frontFt],
-    [narrowLeft - bevel, frontFt],
-    [narrowLeft, yFront],
-    [wideLeft, yFront],
-    [wideLeft - bevel, topFb],
-    [topFlapLeft, topFb],
-    [topFlapLeft, topFt],
-    [wideLeft - bevel, topFt],
-    [wideLeft, yTop],
+    [narrowLeft, yBack], [wideLeft, yBack],
   ], "cut"));
+
+  // Bottom panel flap (left)
+  elements.push(...sideFlap(
+    wideLeft, wideLeft,
+    wideLeft - bevel, wideLeft - bevel,
+    bottomFlapLeft, bottomFb, bottomFt, yBack, yBottom,
+    flapR, bevelR, "cut",
+  ));
+
+  // Transition: wide → narrow
+  elements.push(...pathFromPoints([
+    [wideLeft, yBottom], [narrowLeft, yBottom],
+  ], "cut"));
+
+  // Front panel flap (left)
+  elements.push(...sideFlap(
+    narrowLeft, narrowLeft,
+    narrowLeft - bevel, narrowLeft - bevel,
+    frontFlapLeft, frontFb, frontFt, yBottom, yFront,
+    flapR, bevelR, "cut",
+  ));
+
+  // Transition: narrow → wide
+  elements.push(...pathFromPoints([
+    [narrowLeft, yFront], [wideLeft, yFront],
+  ], "cut"));
+
+  // Top panel flap (left)
+  elements.push(...sideFlap(
+    wideLeft, wideLeft,
+    wideLeft - bevel, wideLeft - bevel,
+    topFlapLeft, topFb, topFt, yFront, yTop,
+    flapR, bevelR, "cut",
+  ));
 
   // --- Close back to tuck ---
   elements.push(...pathFromPoints([
     [wideLeft, yTop],
     [narrowLeft, yTop],
     [tuckBl, yTop],
-    [tuckTl, 0],
   ], "cut"));
+  elements.push(...roundedCorner(
+    tuckBl, yTop,  tuckTl, 0,  tuckTl, 0,
+    tuckR, "cut",
+  ));
 
   // === SCORE LINES ===
   elements.push(hline(wideLeft, wideRight, yTop, "score"));

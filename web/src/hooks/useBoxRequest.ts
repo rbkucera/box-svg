@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
-import type { BoxRequest, BoxStyle, Dieline, Units, Material, LidFit } from "../core/models";
-import { DEFAULT_THICKNESS, getStyleDefinition } from "../core/models";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import type { BoxRequest, BoxStyle, Dieline, Units, Material, LidFit, EmbellishmentConfig } from "../core/models";
+import { DEFAULT_THICKNESS, DEFAULT_EMBELLISHMENTS, getStyleDefinition } from "../core/models";
 import { toInches, fromInches, MM_PER_INCH } from "../core/units";
 import { validateRequest, warnUnusual } from "../core/validation";
 import { generateDieline } from "../core/generators";
@@ -86,6 +86,21 @@ export function useBoxRequest() {
     }));
   };
 
+  const [embellishments, setEmbellishments] = useState<Partial<EmbellishmentConfig>>({});
+
+  // Expose on window for console testing:
+  //   window.setEmbellishments({ flapCornerRadius: 0.125, bevelRadius: 0.1 })
+  //   window.getEmbellishments()
+  const stableSetEmb = useCallback((overrides: Partial<EmbellishmentConfig>) => {
+    setEmbellishments((prev) => ({ ...prev, ...overrides }));
+  }, []);
+
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).setEmbellishments = stableSetEmb;
+    (window as unknown as Record<string, unknown>).resetEmbellishments = () => setEmbellishments({});
+    (window as unknown as Record<string, unknown>).getEmbellishments = () => ({ ...DEFAULT_EMBELLISHMENTS, ...embellishments });
+  }, [stableSetEmb, embellishments]);
+
   const styleDef = getStyleDefinition(form.style);
   const lidLocked = styleDef?.defaultLid === "inside";
 
@@ -104,6 +119,7 @@ export function useBoxRequest() {
       units: form.units,
       material: form.material,
       lid: form.lid,
+      embellishments: Object.keys(embellishments).length > 0 ? embellishments : undefined,
     };
 
     if (form.thickness) {
@@ -116,7 +132,7 @@ export function useBoxRequest() {
     }
 
     return req;
-  }, [form]);
+  }, [form, embellishments]);
 
   const errors = useMemo(() => {
     if (!parsed) return ["Enter valid numeric dimensions"];

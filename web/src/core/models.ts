@@ -39,6 +39,23 @@ export function getStyleDefinition(name: string): BoxStyleDefinition | undefined
   return STYLE_DEFINITIONS.find((s) => s.name === name);
 }
 
+// Embellishment configuration — all values in inches, 0 = sharp/straight
+export interface EmbellishmentConfig {
+  flapCornerRadius: number;      // outer flap corners
+  bevelRadius: number;           // notch bevel transitions
+  tuckCornerRadius: number;      // tuck flap tip corners
+  dustFlapCornerRadius: number;  // dust flap taper corners (tuck-top)
+  glueTabCornerRadius: number;   // glue tab end corners (tuck-top)
+}
+
+export const DEFAULT_EMBELLISHMENTS: EmbellishmentConfig = {
+  flapCornerRadius: 0,
+  bevelRadius: 0,
+  tuckCornerRadius: 0,
+  dustFlapCornerRadius: 0,
+  glueTabCornerRadius: 0,
+};
+
 export interface BoxRequest {
   style: BoxStyle;
   length: number;
@@ -49,6 +66,11 @@ export interface BoxRequest {
   lid: LidFit;
   thickness?: number;
   kerf?: number;
+  embellishments?: Partial<EmbellishmentConfig>;
+}
+
+export function resolveEmbellishments(req: BoxRequest): EmbellishmentConfig {
+  return { ...DEFAULT_EMBELLISHMENTS, ...req.embellishments };
 }
 
 export function effectiveThickness(req: BoxRequest): number {
@@ -68,7 +90,18 @@ export interface Line {
   kind: "cut" | "score";
 }
 
-export type Element = Line;
+export interface Arc {
+  type: "arc";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  r: number;
+  sweep: 0 | 1;
+  kind: "cut" | "score";
+}
+
+export type Element = Line | Arc;
 
 export interface Dieline {
   width: number;
