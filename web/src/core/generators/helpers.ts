@@ -114,7 +114,9 @@ export function roundedPath(
   }
 
   // Clamp radii so adjacent corners don't exceed their shared edge
-  const clamped = radii.map((r) => Math.max(0, r));
+  // Negative radius = flip sweep direction (for convex/outside corners)
+  const signs = radii.map((r) => r >= 0 ? 1 : -1);
+  const clamped = radii.map((r) => Math.max(0, Math.abs(r)));
   for (let i = 0; i < clamped.length; i++) {
     // Corner i sits between edge i and edge i+1
     const maxBefore = edgeLens[i] * 0.49;
@@ -182,7 +184,8 @@ export function roundedPath(
       const dPx = px - cx, dPy = py - cy;
       const dNx = nx - cx, dNy = ny - cy;
       const cross = dPx * dNy - dPy * dNx;
-      const sweep: 0 | 1 = cross >= 0 ? 0 : 1;
+      let sweep: 0 | 1 = cross >= 0 ? 0 : 1;
+      if (signs[i] < 0) sweep = sweep === 0 ? 1 : 0; // flip for negative radius
       els.push({ type: "arc", x1: tbx, y1: tby, x2: tax, y2: tay, r, sweep, kind });
     }
 
