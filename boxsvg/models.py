@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-SUPPORTED_STYLES = ("mailer",)
 SUPPORTED_UNITS = ("in", "mm")
 SUPPORTED_MATERIALS = ("corrugated", "chipboard")
 SUPPORTED_LID_FITS = ("over", "inside")

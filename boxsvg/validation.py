@@ -9,9 +9,9 @@ from boxsvg.models import (
     BoxRequest,
     SUPPORTED_LID_FITS,
     SUPPORTED_MATERIALS,
-    SUPPORTED_STYLES,
     SUPPORTED_UNITS,
 )
+from boxsvg.styles import BoxStyleDefinition, get_style_definition, get_style_names
 
 
 class ValidationError(Exception):
@@ -21,11 +21,12 @@ class ValidationError(Exception):
 def validate_request(request: BoxRequest) -> list[str]:
     """Validate a BoxRequest. Returns list of error messages (empty if valid)."""
     errors: list[str] = []
+    style_definition = get_style_definition(request.style)
 
-    if request.style not in SUPPORTED_STYLES:
+    if style_definition is None:
         errors.append(
             f"Unsupported style: '{request.style}'. "
-            f"Supported: {', '.join(SUPPORTED_STYLES)}"
+            f"Supported: {', '.join(get_style_names())}"
         )
 
     if request.units not in SUPPORTED_UNITS:
@@ -57,7 +58,19 @@ def validate_request(request: BoxRequest) -> list[str]:
     if request.kerf is not None and request.kerf < 0:
         errors.append(f"kerf must be non-negative, got {request.kerf}")
 
+    errors.extend(validate_style_request(request, style_definition))
+
     return errors
+
+
+def validate_style_request(
+    request: BoxRequest,
+    style_definition: BoxStyleDefinition | None,
+) -> list[str]:
+    """Run style-specific validation rules when a style defines them."""
+    if style_definition is None or style_definition.validator is None:
+        return []
+    return style_definition.validator(request)
 
 
 def validate_output_path(path: str, force: bool = False) -> str | None:
