@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import type { BoxRequest, BoxStyle, Dieline, Units, Material, LidFit } from "../core/models";
 import { DEFAULT_THICKNESS, getStyleDefinition } from "../core/models";
-import { toInches, MM_PER_INCH } from "../core/units";
+import { toInches, fromInches, MM_PER_INCH } from "../core/units";
 import { validateRequest, warnUnusual } from "../core/validation";
 import { generateDieline } from "../core/generators";
 
@@ -20,8 +20,8 @@ export interface FormState {
 
 const INITIAL_STATE: FormState = {
   style: "mailer",
-  length: "6",
-  width: "3",
+  length: "4",
+  width: "4",
   height: "2",
   units: "in",
   material: "corrugated",
@@ -86,6 +86,9 @@ export function useBoxRequest() {
     }));
   };
 
+  const styleDef = getStyleDefinition(form.style);
+  const lidLocked = styleDef?.defaultLid === "inside";
+
   const parsed = useMemo((): BoxRequest | null => {
     const length = parseFloat(form.length);
     const width = parseFloat(form.width);
@@ -130,8 +133,14 @@ export function useBoxRequest() {
     return generateDieline(parsed);
   }, [parsed, errors]);
 
-  const thicknessPlaceholder = `${DEFAULT_THICKNESS[form.material]} ${form.units === "mm" ? "mm" : "in"} (${form.material} default)`;
-  const defaultFilename = `box-${form.length}-${form.width}-${form.height}.svg`;
+  // Show default thickness in display units
+  const defaultT = DEFAULT_THICKNESS[form.material];
+  const displayT = form.units === "mm"
+    ? `${(Math.round(fromInches(defaultT, "mm") * 10) / 10)} mm`
+    : `${defaultT} in`;
+  const thicknessPlaceholder = `${displayT} (${form.material} default)`;
+
+  const defaultFilename = `box-${form.style}-${form.length}-${form.width}-${form.height}.svg`;
 
   return {
     form,
@@ -139,6 +148,7 @@ export function useBoxRequest() {
     setStyle,
     setUnits,
     swapToSmallest,
+    lidLocked,
     errors,
     warnings,
     dieline,

@@ -8,6 +8,7 @@ interface Props {
   setStyle: (style: BoxStyle) => void;
   setUnits: (units: Units) => void;
   swapToSmallest: () => void;
+  lidLocked: boolean;
   errors: string[];
   warnings: string[];
   thicknessPlaceholder: string;
@@ -17,7 +18,7 @@ interface Props {
 const HEIGHT_ERROR = "Height should be the smallest dimension";
 
 export function ParameterForm({
-  form, setField, setStyle, setUnits, swapToSmallest,
+  form, setField, setStyle, setUnits, swapToSmallest, lidLocked,
   errors, warnings, thicknessPlaceholder, defaultFilename,
 }: Props) {
   const hasHeightError = errors.includes(HEIGHT_ERROR);
@@ -138,7 +139,11 @@ export function ParameterForm({
 
         <label>
           Lid fit
-          <select value={form.lid} onChange={(e) => setField("lid", e.target.value as LidFit)}>
+          <select
+            value={form.lid}
+            onChange={(e) => setField("lid", e.target.value as LidFit)}
+            disabled={lidLocked}
+          >
             {SUPPORTED_LID_FITS.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}

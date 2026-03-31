@@ -7,7 +7,7 @@ import "./App.css";
 
 function App() {
   const {
-    form, setField, setStyle, setUnits, swapToSmallest,
+    form, setField, setStyle, setUnits, swapToSmallest, lidLocked,
     errors, warnings, dieline,
     thicknessPlaceholder, defaultFilename,
   } = useBoxRequest();
@@ -29,6 +29,7 @@ function App() {
           setStyle={setStyle}
           setUnits={setUnits}
           swapToSmallest={swapToSmallest}
+          lidLocked={lidLocked}
           errors={errors}
           warnings={warnings}
           thicknessPlaceholder={thicknessPlaceholder}

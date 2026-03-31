@@ -119,6 +119,12 @@ input::placeholder {
   color: #b5b5b5;
 }
 
+select:disabled {
+  background: #f0f0f0;
+  color: #999;
+  cursor: not-allowed;
+}
+
 /* Errors and warnings */
 .error-list, .warning-list {
   border-radius: 8px;

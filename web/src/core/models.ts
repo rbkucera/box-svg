@@ -23,7 +23,7 @@ export interface BoxStyleDefinition {
 export const STYLE_DEFINITIONS: BoxStyleDefinition[] = [
   {
     name: "mailer",
-    description: "Roll-end tuck-top shipping box",
+    description: "Roll-end shipping box with glue tab",
     defaultLid: "over",
   },
   {
