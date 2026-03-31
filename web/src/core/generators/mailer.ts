@@ -1,6 +1,6 @@
 import type { BoxRequest, Dieline, Element } from "../models";
 import { effectiveThickness, effectiveKerf, resolveEmbellishments } from "../models";
-import { hline, vline, pathFromPoints, roundedCorner, applyKerf } from "./helpers";
+import { hline, vline, pathFromPoints, roundedCorner, roundedPath, applyKerf } from "./helpers";
 import {
   MAILER_TUCK_DEPTH_RATIO,
   MAILER_TUCK_TAPER_RATIO,
@@ -10,12 +10,11 @@ import {
 } from "./proportions";
 
 /**
- * Emit one side flap as a continuous path:
+ * Emit one side flap as a continuous path using roundedPath:
  *   score line → bevel → flap top → outer edge → flap bot → bevel → score line
  *
- * The 7 points define the path. roundedCorner is applied at the 5 interior
- * corners (bevel-in, top-outer, top-outer-to-edge, bot-outer, bevel-out).
- * With all radii=0, this produces the same straight-line path as before.
+ * Uses roundedPath so adjacent corners (bevel + flap) correctly share edges
+ * and radii are clamped to prevent overlap.
  */
 function sideFlap(
   bodyTop: number, bodyBot: number,
@@ -26,34 +25,18 @@ function sideFlap(
   flapR: number, bevelR: number,
   kind: "cut" | "score",
 ): Element[] {
-  // The 7 waypoints of the flap path
-  const pts: [number, number][] = [
-    [bodyTop, yScoreTop],    // 0: start at score line
-    [bevelTop, ft],          // 1: bevel corner (in)
-    [flapOuter, ft],         // 2: flap top-outer corner
-    [flapOuter, fb],         // 3: flap bot-outer corner
-    [bevelBot, fb],          // 4: bevel corner (out)
-    [bodyBot, yScoreBot],    // 5: end at score line
-  ];
-
-  // Radii for each interior corner (indices 1-4)
-  const radii = [bevelR, flapR, flapR, bevelR];
-
-  const els: Element[] = [];
-  // Emit the path with rounded corners at interior points
-  let prevEnd = pts[0];
-  for (let i = 1; i < pts.length - 1; i++) {
-    const corner = pts[i];
-    const next = pts[i + 1];
-    const r = radii[i - 1];
-    const seg = roundedCorner(prevEnd[0], prevEnd[1], corner[0], corner[1], next[0], next[1], r, kind);
-    els.push(...seg);
-    // The last element's endpoint is our new prevEnd
-    const last = seg[seg.length - 1];
-    prevEnd = [last.x2, last.y2];
-  }
-
-  return els;
+  return roundedPath(
+    [
+      [bodyTop, yScoreTop],    // 0: start at score line
+      [bevelTop, ft],          // 1: bevel corner (in)
+      [flapOuter, ft],         // 2: flap top-outer corner
+      [flapOuter, fb],         // 3: flap bot-outer corner
+      [bevelBot, fb],          // 4: bevel corner (out)
+      [bodyBot, yScoreBot],    // 5: end at score line
+    ],
+    [bevelR, flapR, flapR, bevelR],
+    kind,
+  );
 }
 
 export function generateMailerDieline(request: BoxRequest): Dieline {
