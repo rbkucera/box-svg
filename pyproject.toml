@@ -12,5 +12,8 @@ dependencies = ["click>=8.0"]
 [project.scripts]
 boxsvg = "boxsvg.cli:main"
 
+[tool.setuptools]
+packages = ["boxsvg", "boxsvg.generators"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

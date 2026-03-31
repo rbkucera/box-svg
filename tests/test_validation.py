@@ -27,6 +27,11 @@ def test_invalid_style():
     assert any("Unsupported style" in e for e in errors)
 
 
+def test_tuck_top_requires_inside_lid():
+    errors = validate_request(make_request(style="tuck-top", lid="over"))
+    assert any("require lid fit 'inside'" in e.lower() for e in errors)
+
+
 def test_invalid_units():
     errors = validate_request(make_request(units="cm"))
     assert any("Unsupported units" in e for e in errors)
