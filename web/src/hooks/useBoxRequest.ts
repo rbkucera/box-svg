@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
-import type { BoxRequest, Dieline, Units, Material, LidFit } from "../core/models";
-import { DEFAULT_THICKNESS } from "../core/models";
+import type { BoxRequest, BoxStyle, Dieline, Units, Material, LidFit } from "../core/models";
+import { DEFAULT_THICKNESS, getStyleDefinition } from "../core/models";
 import { toInches, MM_PER_INCH } from "../core/units";
 import { validateRequest, warnUnusual } from "../core/validation";
 import { generateDieline } from "../core/generators";
 
 export interface FormState {
-  style: string;
+  style: BoxStyle;
   length: string;
   width: string;
   height: string;
@@ -52,6 +52,12 @@ export function useBoxRequest() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const setStyle = (newStyle: BoxStyle) => {
+    const styleDef = getStyleDefinition(newStyle);
+    const defaultLid = styleDef?.defaultLid ?? "over";
+    setForm((prev) => ({ ...prev, style: newStyle, lid: defaultLid }));
+  };
+
   const setUnits = (newUnits: Units) => {
     if (newUnits === form.units) return;
     setForm((prev) => ({
@@ -88,7 +94,7 @@ export function useBoxRequest() {
     if (isNaN(length) || isNaN(width) || isNaN(height)) return null;
 
     const req: BoxRequest = {
-      style: "mailer",
+      style: form.style,
       length: toInches(length, form.units),
       width: toInches(width, form.units),
       height: toInches(height, form.units),
@@ -130,6 +136,7 @@ export function useBoxRequest() {
   return {
     form,
     setField,
+    setStyle,
     setUnits,
     swapToSmallest,
     errors,

@@ -1,8 +1,10 @@
 import type { BoxRequest, Dieline } from "../models";
 import { generateMailerDieline } from "./mailer";
+import { generateTuckTopDieline } from "./tuckTop";
 
 const GENERATORS: Record<string, (req: BoxRequest) => Dieline> = {
   mailer: generateMailerDieline,
+  "tuck-top": generateTuckTopDieline,
 };
 
 export function generateDieline(request: BoxRequest): Dieline {

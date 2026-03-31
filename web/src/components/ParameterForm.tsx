@@ -1,10 +1,11 @@
 import type { FormState } from "../hooks/useBoxRequest";
-import type { Units, Material, LidFit } from "../core/models";
-import { SUPPORTED_MATERIALS, SUPPORTED_LID_FITS } from "../core/models";
+import type { BoxStyle, Units, Material, LidFit } from "../core/models";
+import { SUPPORTED_MATERIALS, SUPPORTED_LID_FITS, STYLE_DEFINITIONS } from "../core/models";
 
 interface Props {
   form: FormState;
   setField: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+  setStyle: (style: BoxStyle) => void;
   setUnits: (units: Units) => void;
   swapToSmallest: () => void;
   errors: string[];
@@ -16,14 +17,27 @@ interface Props {
 const HEIGHT_ERROR = "Height should be the smallest dimension";
 
 export function ParameterForm({
-  form, setField, setUnits, swapToSmallest,
+  form, setField, setStyle, setUnits, swapToSmallest,
   errors, warnings, thicknessPlaceholder, defaultFilename,
 }: Props) {
   const hasHeightError = errors.includes(HEIGHT_ERROR);
+  const otherErrors = errors.filter((e) => e !== HEIGHT_ERROR);
 
   return (
     <div className="parameter-form">
       <h2>Box Parameters</h2>
+
+      <fieldset>
+        <legend>Style</legend>
+        <label>
+          Box style
+          <select value={form.style} onChange={(e) => setStyle(e.target.value as BoxStyle)}>
+            {STYLE_DEFINITIONS.map((s) => (
+              <option key={s.name} value={s.name}>{s.name} — {s.description}</option>
+            ))}
+          </select>
+        </label>
+      </fieldset>
 
       <fieldset>
         <legend>Dimensions</legend>
@@ -142,9 +156,9 @@ export function ParameterForm({
         </label>
       </fieldset>
 
-      {errors.filter((e) => e !== HEIGHT_ERROR).length > 0 && (
+      {otherErrors.length > 0 && (
         <div className="error-list">
-          {errors.filter((e) => e !== HEIGHT_ERROR).map((e, i) => (
+          {otherErrors.map((e, i) => (
             <p key={i} className="error">{e}</p>
           ))}
         </div>

@@ -1,9 +1,9 @@
-export type BoxStyle = "mailer";
+export type BoxStyle = "mailer" | "tuck-top";
 export type Units = "in" | "mm";
 export type Material = "corrugated" | "chipboard";
 export type LidFit = "over" | "inside";
 
-export const SUPPORTED_STYLES: BoxStyle[] = ["mailer"];
+export const SUPPORTED_STYLES: BoxStyle[] = ["mailer", "tuck-top"];
 export const SUPPORTED_UNITS: Units[] = ["in", "mm"];
 export const SUPPORTED_MATERIALS: Material[] = ["corrugated", "chipboard"];
 export const SUPPORTED_LID_FITS: LidFit[] = ["over", "inside"];
@@ -12,6 +12,32 @@ export const DEFAULT_THICKNESS: Record<Material, number> = {
   corrugated: 0.125,
   chipboard: 0.05,
 };
+
+export interface BoxStyleDefinition {
+  name: BoxStyle;
+  description: string;
+  defaultLid: LidFit;
+  validator?: (req: BoxRequest) => string[];
+}
+
+export const STYLE_DEFINITIONS: BoxStyleDefinition[] = [
+  {
+    name: "mailer",
+    description: "Roll-end tuck-top shipping box",
+    defaultLid: "over",
+  },
+  {
+    name: "tuck-top",
+    description: "Folding carton with tuck flap and glue tab",
+    defaultLid: "inside",
+    validator: (req) =>
+      req.lid !== "inside" ? ["Tuck-top boxes require lid fit 'inside'"] : [],
+  },
+];
+
+export function getStyleDefinition(name: string): BoxStyleDefinition | undefined {
+  return STYLE_DEFINITIONS.find((s) => s.name === name);
+}
 
 export interface BoxRequest {
   style: BoxStyle;

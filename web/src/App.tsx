@@ -7,7 +7,7 @@ import "./App.css";
 
 function App() {
   const {
-    form, setField, setUnits, swapToSmallest,
+    form, setField, setStyle, setUnits, swapToSmallest,
     errors, warnings, dieline,
     thicknessPlaceholder, defaultFilename,
   } = useBoxRequest();
@@ -26,6 +26,7 @@ function App() {
         <ParameterForm
           form={form}
           setField={setField}
+          setStyle={setStyle}
           setUnits={setUnits}
           swapToSmallest={swapToSmallest}
           errors={errors}

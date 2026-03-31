@@ -4,6 +4,7 @@ import {
   SUPPORTED_UNITS,
   SUPPORTED_MATERIALS,
   SUPPORTED_LID_FITS,
+  getStyleDefinition,
 } from "./models";
 
 export function validateRequest(req: BoxRequest): string[] {
@@ -37,6 +38,12 @@ export function validateRequest(req: BoxRequest): string[] {
 
   if (req.height > req.length || req.height > req.width) {
     errors.push("Height should be the smallest dimension");
+  }
+
+  // Style-specific validation
+  const styleDef = getStyleDefinition(req.style);
+  if (styleDef?.validator) {
+    errors.push(...styleDef.validator(req));
   }
 
   return errors;
