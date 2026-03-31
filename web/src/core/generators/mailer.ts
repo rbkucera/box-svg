@@ -1,25 +1,13 @@
-import type { BoxRequest, Dieline, Element, Line } from "../models";
+import type { BoxRequest, Dieline, Element } from "../models";
 import { effectiveThickness, effectiveKerf } from "../models";
-
-function hline(x1: number, x2: number, y: number, kind: "cut" | "score"): Line {
-  return { type: "line", x1, y1: y, x2, y2: y, kind };
-}
-
-function vline(x: number, y1: number, y2: number, kind: "cut" | "score"): Line {
-  return { type: "line", x1: x, y1, x2: x, y2, kind };
-}
-
-function pathFromPoints(points: [number, number][], kind: "cut" | "score"): Line[] {
-  const lines: Line[] = [];
-  for (let i = 0; i < points.length - 1; i++) {
-    const [x1, y1] = points[i];
-    const [x2, y2] = points[i + 1];
-    if (Math.abs(x1 - x2) > 1e-6 || Math.abs(y1 - y2) > 1e-6) {
-      lines.push({ type: "line", x1, y1, x2, y2, kind });
-    }
-  }
-  return lines;
-}
+import { hline, vline, pathFromPoints, applyKerf } from "./helpers";
+import {
+  MAILER_TUCK_DEPTH_RATIO,
+  MAILER_TUCK_TAPER_RATIO,
+  MAILER_FLAP_WIDTH_RATIO,
+  MAILER_LID_THICKNESS_RATIO,
+  MAILER_BEVEL_INSET_MULTIPLIER,
+} from "./proportions";
 
 export function generateMailerDieline(request: BoxRequest): Dieline {
   const L = request.length;
@@ -29,8 +17,9 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   const kerf = effectiveKerf(request);
 
   // Panel heights
-  const tuckH = H / 2;
-  const topPanelH = request.lid === "inside" ? W - T / 2 : W + T / 2;
+  const tuckH = H * MAILER_TUCK_DEPTH_RATIO;
+  const lidAdj = T * MAILER_LID_THICKNESS_RATIO;
+  const topPanelH = request.lid === "inside" ? W - lidAdj : W + lidAdj;
   const frontPanelH = H;
   const bottomPanelH = W;
   const backPanelH = H;
@@ -40,8 +29,11 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   const wideBody = L + T;
 
   // Side flap widths
-  const heightFlapW = W / 2;
-  const widthFlapW = H / 2;
+  const heightFlapW = W * MAILER_FLAP_WIDTH_RATIO;
+  const widthFlapW = H * MAILER_FLAP_WIDTH_RATIO;
+
+  // Bevel inset
+  const bevel = T * MAILER_BEVEL_INSET_MULTIPLIER;
 
   // Total dieline
   let totalH = tuckH + topPanelH + frontPanelH + bottomPanelH + backPanelH;
@@ -82,7 +74,7 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
 
   // Tuck flap geometry
   const tuckBaseInset = T;
-  const tuckTaper = H / 8;
+  const tuckTaper = H * MAILER_TUCK_TAPER_RATIO;
   const tuckBl = narrowLeft + tuckBaseInset;
   const tuckBr = narrowRight - tuckBaseInset;
   const tuckTl = tuckBl + tuckTaper;
@@ -104,28 +96,28 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   // --- RIGHT SIDE (going down) ---
   elements.push(...pathFromPoints([
     [wideRight, yTop],
-    [wideRight + T, topFt],
+    [wideRight + bevel, topFt],
     [topFlapRight, topFt],
     [topFlapRight, topFb],
-    [wideRight + T, topFb],
+    [wideRight + bevel, topFb],
     [wideRight, yFront],
     [narrowRight, yFront],
-    [narrowRight + T, frontFt],
+    [narrowRight + bevel, frontFt],
     [frontFlapRight, frontFt],
     [frontFlapRight, frontFb],
-    [narrowRight + T, frontFb],
+    [narrowRight + bevel, frontFb],
     [narrowRight, yBottom],
     [wideRight, yBottom],
-    [wideRight + T, bottomFt],
+    [wideRight + bevel, bottomFt],
     [bottomFlapRight, bottomFt],
     [bottomFlapRight, bottomFb],
-    [wideRight + T, bottomFb],
+    [wideRight + bevel, bottomFb],
     [wideRight, yBack],
     [narrowRight, yBack],
-    [narrowRight + T, backFt],
+    [narrowRight + bevel, backFt],
     [backFlapRight, backFt],
     [backFlapRight, backFb],
-    [narrowRight + T, backFb],
+    [narrowRight + bevel, backFb],
     [narrowRight, yEnd],
   ], "cut"));
 
@@ -135,28 +127,28 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   // --- LEFT SIDE (going up) ---
   elements.push(...pathFromPoints([
     [narrowLeft, yEnd],
-    [narrowLeft - T, backFb],
+    [narrowLeft - bevel, backFb],
     [backFlapLeft, backFb],
     [backFlapLeft, backFt],
-    [narrowLeft - T, backFt],
+    [narrowLeft - bevel, backFt],
     [narrowLeft, yBack],
     [wideLeft, yBack],
-    [wideLeft - T, bottomFb],
+    [wideLeft - bevel, bottomFb],
     [bottomFlapLeft, bottomFb],
     [bottomFlapLeft, bottomFt],
-    [wideLeft - T, bottomFt],
+    [wideLeft - bevel, bottomFt],
     [wideLeft, yBottom],
     [narrowLeft, yBottom],
-    [narrowLeft - T, frontFb],
+    [narrowLeft - bevel, frontFb],
     [frontFlapLeft, frontFb],
     [frontFlapLeft, frontFt],
-    [narrowLeft - T, frontFt],
+    [narrowLeft - bevel, frontFt],
     [narrowLeft, yFront],
     [wideLeft, yFront],
-    [wideLeft - T, topFb],
+    [wideLeft - bevel, topFb],
     [topFlapLeft, topFb],
     [topFlapLeft, topFt],
-    [wideLeft - T, topFt],
+    [wideLeft - bevel, topFt],
     [wideLeft, yTop],
   ], "cut"));
 
@@ -186,14 +178,8 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   }
 
   // Kerf compensation
-  const k = kerf / 2;
-  if (k > 0) {
-    for (const el of elements) {
-      el.x1 += k;
-      el.y1 += k;
-      el.x2 += k;
-      el.y2 += k;
-    }
+  applyKerf(elements, kerf);
+  if (kerf > 0) {
     totalW += kerf;
     totalH += kerf;
   }

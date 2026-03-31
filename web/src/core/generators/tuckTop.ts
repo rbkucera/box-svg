@@ -1,32 +1,34 @@
-import type { BoxRequest, Dieline, Element, Line } from "../models";
+import type { BoxRequest, Dieline, Element } from "../models";
 import { effectiveThickness, effectiveKerf } from "../models";
-
-function hline(x1: number, x2: number, y: number, kind: "cut" | "score"): Line {
-  return { type: "line", x1, y1: y, x2, y2: y, kind };
-}
-
-function vline(x: number, y1: number, y2: number, kind: "cut" | "score"): Line {
-  return { type: "line", x1: x, y1, x2: x, y2, kind };
-}
-
-function pathFromPoints(points: [number, number][], kind: "cut" | "score"): Line[] {
-  const lines: Line[] = [];
-  for (let i = 0; i < points.length - 1; i++) {
-    const [x1, y1] = points[i];
-    const [x2, y2] = points[i + 1];
-    if (Math.abs(x1 - x2) > 1e-6 || Math.abs(y1 - y2) > 1e-6) {
-      lines.push({ type: "line", x1, y1, x2, y2, kind });
-    }
-  }
-  return lines;
-}
+import { hline, vline, pathFromPoints, applyKerf } from "./helpers";
+import {
+  TUCKTOP_DUST_DEPTH_RATIO,
+  TUCKTOP_TUCK_DEPTH_RATIO,
+  TUCKTOP_CLOSURE_DEPTH_RATIO,
+  TUCKTOP_GLUE_BEVEL_HEIGHT_RATIO,
+  TUCKTOP_GLUE_BEVEL_WIDTH_RATIO,
+  TUCKTOP_TUCK_INSET_LENGTH_RATIO,
+  TUCKTOP_TUCK_INSET_DEPTH_RATIO,
+  TUCKTOP_GLUE_TAB_MIN_RATIO,
+  TUCKTOP_GLUE_TAB_MAX_RATIO,
+  TUCKTOP_GLUE_TAB_THICKNESS_MULTIPLIER,
+  TUCKTOP_DUST_TAPER_MIN_RATIO,
+  TUCKTOP_DUST_TAPER_MAX_RATIO,
+  TUCKTOP_DUST_TAPER_THICKNESS_MULTIPLIER,
+} from "./proportions";
 
 function glueTabWidth(width: number, thickness: number): number {
-  return Math.min(width / 2, Math.max(width / 4, thickness * 4));
+  return Math.min(
+    width * TUCKTOP_GLUE_TAB_MAX_RATIO,
+    Math.max(width * TUCKTOP_GLUE_TAB_MIN_RATIO, thickness * TUCKTOP_GLUE_TAB_THICKNESS_MULTIPLIER),
+  );
 }
 
 function dustFlapTaper(width: number, thickness: number): number {
-  return Math.min(width / 4, Math.max(width / 8, thickness * 2));
+  return Math.min(
+    width * TUCKTOP_DUST_TAPER_MAX_RATIO,
+    Math.max(width * TUCKTOP_DUST_TAPER_MIN_RATIO, thickness * TUCKTOP_DUST_TAPER_THICKNESS_MULTIPLIER),
+  );
 }
 
 export function generateTuckTopDieline(request: BoxRequest): Dieline {
@@ -37,11 +39,11 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
   const kerf = effectiveKerf(request);
 
   const glueW = glueTabWidth(width, thickness);
-  const dustDepth = width / 2;
-  const tuckDepth = width;
-  const closureDepth = width / 2;
-  const glueBevel = Math.min(height / 6, glueW / 2);
-  const tuckInset = Math.min(length / 8, tuckDepth / 3);
+  const dustDepth = width * TUCKTOP_DUST_DEPTH_RATIO;
+  const tuckDepth = width * TUCKTOP_TUCK_DEPTH_RATIO;
+  const closureDepth = width * TUCKTOP_CLOSURE_DEPTH_RATIO;
+  const glueBevel = Math.min(height * TUCKTOP_GLUE_BEVEL_HEIGHT_RATIO, glueW * TUCKTOP_GLUE_BEVEL_WIDTH_RATIO);
+  const tuckInset = Math.min(length * TUCKTOP_TUCK_INSET_LENGTH_RATIO, tuckDepth * TUCKTOP_TUCK_INSET_DEPTH_RATIO);
   const dustTaper = dustFlapTaper(width, thickness);
 
   // Horizontal bands: glue tab, rear, side, front, side
@@ -144,14 +146,8 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
   elements.push(hline(x3, x4, y4, "score"));
 
   // Kerf compensation
-  const k = kerf / 2;
-  if (k > 0) {
-    for (const el of elements) {
-      el.x1 += k;
-      el.y1 += k;
-      el.x2 += k;
-      el.y2 += k;
-    }
+  applyKerf(elements, kerf);
+  if (kerf > 0) {
     x5 += kerf;
     y5 += kerf;
   }
