@@ -20,28 +20,20 @@ interface ViewportMetrics {
   clientHeight: number;
 }
 
-function RenderElement({ el, maxX }: { el: Element; maxX: number }) {
-  // Rotate 90° CCW: (x,y) → (y*PPI, maxX - x*PPI)
-  const rx = (_x: number, y: number) => y * PPI;
-  const ry = (x: number, _y: number) => maxX - x * PPI;
-
+function RenderElement({ el }: { el: Element }) {
   if (el.type === "arc") {
-    const sx1 = rx(el.x1, el.y1), sy1 = ry(el.x1, el.y1);
-    const sx2 = rx(el.x2, el.y2), sy2 = ry(el.x2, el.y2);
     const rPx = el.r * PPI;
-    // The rotation (x,y)→(y, maxX-x) includes an x-reflection, which flips sweep
-    const sweep = el.sweep === 0 ? 1 : 0;
     return (
-      <path d={`M ${sx1},${sy1} A ${rPx},${rPx} 0 0,${sweep} ${sx2},${sy2}`} />
+      <path d={`M ${el.x1 * PPI},${el.y1 * PPI} A ${rPx},${rPx} 0 0,${el.sweep} ${el.x2 * PPI},${el.y2 * PPI}`} />
     );
   }
 
   return (
     <line
-      x1={rx(el.x1, el.y1)}
-      y1={ry(el.x1, el.y1)}
-      x2={rx(el.x2, el.y2)}
-      y2={ry(el.x2, el.y2)}
+      x1={el.x1 * PPI}
+      y1={el.y1 * PPI}
+      x2={el.x2 * PPI}
+      y2={el.y2 * PPI}
     />
   );
 }
@@ -49,13 +41,12 @@ function RenderElement({ el, maxX }: { el: Element; maxX: number }) {
 function DielineDrawing({ dieline }: { dieline: Dieline }) {
   const cutElements = dieline.elements.filter((el) => el.kind === "cut");
   const scoreElements = dieline.elements.filter((el) => el.kind === "score");
-  const maxX = dieline.width * PPI;
 
   return (
     <>
       <g id="cut" stroke={CUT_COLOR} strokeWidth={STROKE_WIDTH} fill="none">
         {cutElements.map((el, i) => (
-          <RenderElement key={`cut-${i}`} el={el} maxX={maxX} />
+          <RenderElement key={`cut-${i}`} el={el} />
         ))}
       </g>
       <g
@@ -66,7 +57,7 @@ function DielineDrawing({ dieline }: { dieline: Dieline }) {
         fill="none"
       >
         {scoreElements.map((el, i) => (
-          <RenderElement key={`score-${i}`} el={el} maxX={maxX} />
+          <RenderElement key={`score-${i}`} el={el} />
         ))}
       </g>
     </>
@@ -182,8 +173,8 @@ export function SvgPreview({ dieline }: Props) {
     );
   }
 
-  const svgW = dieline.height * PPI;
-  const svgH = dieline.width * PPI;
+  const svgW = dieline.width * PPI;
+  const svgH = dieline.height * PPI;
   const navigatorWidth = Math.min(NAVIGATOR_SIZE, svgW);
   const navigatorHeight = Math.min(NAVIGATOR_SIZE, (svgH / svgW) * navigatorWidth);
   const visibleWidth = mode === "full" ? viewport.clientWidth : fitViewport.width;
