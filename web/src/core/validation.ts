@@ -35,6 +35,10 @@ export function validateRequest(req: BoxRequest): string[] {
     errors.push(`kerf must be non-negative, got ${req.kerf}`);
   }
 
+  if (req.height > req.length || req.height > req.width) {
+    errors.push("Height should be the smallest dimension");
+  }
+
   return errors;
 }
 

@@ -5,12 +5,22 @@ import { SUPPORTED_MATERIALS, SUPPORTED_LID_FITS } from "../core/models";
 interface Props {
   form: FormState;
   setField: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+  setUnits: (units: Units) => void;
+  swapToSmallest: () => void;
   errors: string[];
   warnings: string[];
   thicknessPlaceholder: string;
+  defaultFilename: string;
 }
 
-export function ParameterForm({ form, setField, errors, warnings, thicknessPlaceholder }: Props) {
+const HEIGHT_ERROR = "Height should be the smallest dimension";
+
+export function ParameterForm({
+  form, setField, setUnits, swapToSmallest,
+  errors, warnings, thicknessPlaceholder, defaultFilename,
+}: Props) {
+  const hasHeightError = errors.includes(HEIGHT_ERROR);
+
   return (
     <div className="parameter-form">
       <h2>Box Parameters</h2>
@@ -20,7 +30,7 @@ export function ParameterForm({ form, setField, errors, warnings, thicknessPlace
 
         <label>
           Units
-          <select value={form.units} onChange={(e) => setField("units", e.target.value as Units)}>
+          <select value={form.units} onChange={(e) => setUnits(e.target.value as Units)}>
             <option value="in">Inches</option>
             <option value="mm">Millimeters</option>
           </select>
@@ -56,7 +66,16 @@ export function ParameterForm({ form, setField, errors, warnings, thicknessPlace
             onChange={(e) => setField("height", e.target.value)}
             min="0"
             step="any"
+            className={hasHeightError ? "input-error" : ""}
           />
+          {hasHeightError && (
+            <span className="height-fix">
+              Height should be the smallest dimension —{" "}
+              <button type="button" className="link-button" onClick={swapToSmallest}>
+                click to correct
+              </button>
+            </span>
+          )}
         </label>
       </fieldset>
 
@@ -111,11 +130,23 @@ export function ParameterForm({ form, setField, errors, warnings, thicknessPlace
             ))}
           </select>
         </label>
+
+        <label>
+          Filename
+          <input
+            type="text"
+            value={form.filename}
+            onChange={(e) => setField("filename", e.target.value)}
+            placeholder={defaultFilename}
+          />
+        </label>
       </fieldset>
 
-      {errors.length > 0 && (
+      {errors.filter((e) => e !== HEIGHT_ERROR).length > 0 && (
         <div className="error-list">
-          {errors.map((e, i) => <p key={i} className="error">{e}</p>)}
+          {errors.filter((e) => e !== HEIGHT_ERROR).map((e, i) => (
+            <p key={i} className="error">{e}</p>
+          ))}
         </div>
       )}
 

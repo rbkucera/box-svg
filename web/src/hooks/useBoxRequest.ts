@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import type { BoxRequest, Dieline, Units, Material, LidFit } from "../core/models";
 import { DEFAULT_THICKNESS } from "../core/models";
-import { toInches } from "../core/units";
+import { toInches, MM_PER_INCH } from "../core/units";
 import { validateRequest, warnUnusual } from "../core/validation";
 import { generateDieline } from "../core/generators";
 
@@ -15,25 +15,69 @@ export interface FormState {
   lid: LidFit;
   thickness: string;
   kerf: string;
+  filename: string;
 }
 
 const INITIAL_STATE: FormState = {
   style: "mailer",
   length: "6",
   width: "3",
-  height: "4",
+  height: "2",
   units: "in",
   material: "corrugated",
   lid: "over",
   thickness: "",
   kerf: "",
+  filename: "",
 };
+
+function convertDimension(value: string, toUnits: Units): string {
+  const n = parseFloat(value);
+  if (!value || isNaN(n)) return value;
+  if (toUnits === "mm") return Math.round(n * MM_PER_INCH).toString();
+  return (Math.round((n / MM_PER_INCH) * 10) / 10).toString();
+}
+
+function convertFine(value: string, toUnits: Units): string {
+  const n = parseFloat(value);
+  if (!value || isNaN(n)) return value;
+  if (toUnits === "mm") return (Math.round(n * MM_PER_INCH * 10) / 10).toString();
+  return (Math.round((n / MM_PER_INCH) * 100) / 100).toString();
+}
 
 export function useBoxRequest() {
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const setUnits = (newUnits: Units) => {
+    if (newUnits === form.units) return;
+    setForm((prev) => ({
+      ...prev,
+      units: newUnits,
+      length: convertDimension(prev.length, newUnits),
+      width: convertDimension(prev.width, newUnits),
+      height: convertDimension(prev.height, newUnits),
+      thickness: convertFine(prev.thickness, newUnits),
+      kerf: convertFine(prev.kerf, newUnits),
+    }));
+  };
+
+  const swapToSmallest = () => {
+    const vals = [
+      { key: "length" as const, n: parseFloat(form.length) || 0 },
+      { key: "width" as const, n: parseFloat(form.width) || 0 },
+      { key: "height" as const, n: parseFloat(form.height) || 0 },
+    ];
+    vals.sort((a, b) => b.n - a.n);
+    setForm((prev) => ({
+      ...prev,
+      length: prev[vals[0].key],
+      width: prev[vals[1].key],
+      height: prev[vals[2].key],
+    }));
   };
 
   const parsed = useMemo((): BoxRequest | null => {
@@ -81,13 +125,17 @@ export function useBoxRequest() {
   }, [parsed, errors]);
 
   const thicknessPlaceholder = `${DEFAULT_THICKNESS[form.material]} ${form.units === "mm" ? "mm" : "in"} (${form.material} default)`;
+  const defaultFilename = `box-${form.length}-${form.width}-${form.height}.svg`;
 
   return {
     form,
     setField,
+    setUnits,
+    swapToSmallest,
     errors,
     warnings,
     dieline,
     thicknessPlaceholder,
+    defaultFilename,
   };
 }

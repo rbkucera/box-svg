@@ -24,39 +24,42 @@ export function SvgPreview({ dieline }: Props) {
   const cutElements = dieline.elements.filter((el) => el.kind === "cut");
   const scoreElements = dieline.elements.filter((el) => el.kind === "score");
 
+  // Rotate 90° for landscape: swap viewBox dimensions, rotate content
   return (
     <svg
-      viewBox={`0 0 ${svgW} ${svgH}`}
+      viewBox={`0 0 ${svgH} ${svgW}`}
       preserveAspectRatio="xMidYMid meet"
       style={{ width: "100%", height: "100%", background: "#fff" }}
     >
-      <g id="cut" stroke={CUT_COLOR} strokeWidth={STROKE_WIDTH} fill="none">
-        {cutElements.map((el, i) => (
-          <line
-            key={`cut-${i}`}
-            x1={el.x1 * PPI}
-            y1={el.y1 * PPI}
-            x2={el.x2 * PPI}
-            y2={el.y2 * PPI}
-          />
-        ))}
-      </g>
-      <g
-        id="score"
-        stroke={SCORE_COLOR}
-        strokeWidth={STROKE_WIDTH}
-        strokeDasharray="4 2"
-        fill="none"
-      >
-        {scoreElements.map((el, i) => (
-          <line
-            key={`score-${i}`}
-            x1={el.x1 * PPI}
-            y1={el.y1 * PPI}
-            x2={el.x2 * PPI}
-            y2={el.y2 * PPI}
-          />
-        ))}
+      <g transform={`rotate(-90, ${svgH / 2}, ${svgH / 2})`}>
+        <g id="cut" stroke={CUT_COLOR} strokeWidth={STROKE_WIDTH} fill="none">
+          {cutElements.map((el, i) => (
+            <line
+              key={`cut-${i}`}
+              x1={el.x1 * PPI}
+              y1={el.y1 * PPI}
+              x2={el.x2 * PPI}
+              y2={el.y2 * PPI}
+            />
+          ))}
+        </g>
+        <g
+          id="score"
+          stroke={SCORE_COLOR}
+          strokeWidth={STROKE_WIDTH}
+          strokeDasharray="4 2"
+          fill="none"
+        >
+          {scoreElements.map((el, i) => (
+            <line
+              key={`score-${i}`}
+              x1={el.x1 * PPI}
+              y1={el.y1 * PPI}
+              x2={el.x2 * PPI}
+              y2={el.y2 * PPI}
+            />
+          ))}
+        </g>
       </g>
     </svg>
   );

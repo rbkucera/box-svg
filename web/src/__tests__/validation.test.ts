@@ -6,8 +6,8 @@ function makeRequest(overrides: Partial<BoxRequest> = {}): BoxRequest {
   return {
     style: "mailer",
     length: 6.0,
-    width: 2.0,
-    height: 3.5,
+    width: 3.5,
+    height: 2.0,
     units: "in",
     material: "corrugated",
     lid: "over",
@@ -42,6 +42,21 @@ describe("validateRequest", () => {
 
   it("accepts zero kerf", () => {
     expect(validateRequest(makeRequest({ kerf: 0 }))).toEqual([]);
+  });
+
+  it("rejects height larger than length", () => {
+    const errors = validateRequest(makeRequest({ length: 2, height: 5 }));
+    expect(errors.some((e) => e.includes("smallest dimension"))).toBe(true);
+  });
+
+  it("rejects height larger than width", () => {
+    const errors = validateRequest(makeRequest({ width: 1, height: 3 }));
+    expect(errors.some((e) => e.includes("smallest dimension"))).toBe(true);
+  });
+
+  it("accepts height equal to width", () => {
+    const errors = validateRequest(makeRequest({ width: 3, height: 3 }));
+    expect(errors.every((e) => !e.includes("smallest dimension"))).toBe(true);
   });
 });
 

@@ -5,13 +5,14 @@ import { downloadSvg } from "../utils/downloadSvg";
 interface Props {
   dieline: Dieline | null;
   units: Units;
+  filename: string;
 }
 
-export function DownloadButton({ dieline, units }: Props) {
+export function DownloadButton({ dieline, units, filename }: Props) {
   const handleDownload = () => {
     if (!dieline) return;
     const svgString = renderSvgString(dieline, units);
-    downloadSvg(svgString);
+    downloadSvg(svgString, filename);
   };
 
   return (
