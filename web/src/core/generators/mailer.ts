@@ -120,15 +120,14 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
 
   // === CUT OUTLINE ===
 
-  // --- TUCK (full shape with rounded corners at all 4 points) ---
-  // Path: tuck tip left → tip right → base right → body transition
+  // --- TUCK (rounded at tip corners, sharp at base) ---
   elements.push(...roundedPath([
-    [tuckTl, 0],        // tip left (start)
-    [tuckTr, 0],        // tip right
-    [tuckBr, yTop],     // base right (taper meets score line)
+    [tuckTl, 0],
+    [tuckTr, 0],
+    [tuckBr, yTop],
     [narrowRight, yTop],
-    [wideRight, yTop],  // transition to wide body
-  ], [tuckR, tuckR, 0], "cut"));
+    [wideRight, yTop],
+  ], [tuckR, 0, 0], "cut"));
 
   // --- RIGHT SIDE (going down) ---
   // Top panel flap
@@ -233,9 +232,9 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   elements.push(...roundedPath([
     [wideLeft, yTop],
     [narrowLeft, yTop],
-    [tuckBl, yTop],     // base left (taper meets score line)
-    [tuckTl, 0],        // tip left (closes the path)
-  ], [0, tuckR], "cut"));
+    [tuckBl, yTop],
+    [tuckTl, 0],
+  ], [0, 0], "cut"));
 
   // === SCORE LINES ===
   elements.push(hline(wideLeft, wideRight, yTop, "score"));
