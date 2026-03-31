@@ -34,7 +34,7 @@ export function ParameterForm({
           Box style
           <select value={form.style} onChange={(e) => setStyle(e.target.value as BoxStyle)}>
             {STYLE_DEFINITIONS.map((s) => (
-              <option key={s.name} value={s.name}>{s.name} — {s.description}</option>
+              <option key={s.name} value={s.name}>{s.name}</option>
             ))}
           </select>
         </label>
