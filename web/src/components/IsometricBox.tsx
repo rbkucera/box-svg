@@ -45,15 +45,14 @@ export function IsometricBox({ length: L, width: W, height: H, size = 200 }: Pro
   const s = (p: [number, number]) => `${p[0] * scale + ox},${p[1] * scale + oy}`;
 
   // All 6 faces, drawn back-to-front for correct occlusion
+  // In this isometric view (camera looks down-left), the order is:
+  // 1. bottom (furthest), 2. back, 3. left, 4. top, 5. right, 6. front (nearest)
   const faces = [
-    // Back 3 faces (hidden, draw first)
-    { pts: [v.btl, v.btr, v.bbr, v.bbl], fill: "#8b6520" },  // back
     { pts: [v.fbl, v.bbl, v.bbr, v.fbr], fill: "#7a5a1c" },  // bottom
-    { pts: [v.btl, v.bbl, v.fbl, v.ftl], fill: "#7a5a1c" },  // left side
-
-    // Front 3 faces (visible)
+    { pts: [v.btl, v.btr, v.bbr, v.bbl], fill: "#8b6520" },  // back
+    { pts: [v.ftl, v.btl, v.bbl, v.fbl], fill: "#7a5a1c" },  // left side
     { pts: [v.ftl, v.ftr, v.btr, v.btl], fill: "#d4a76a" },  // top
-    { pts: [v.fbr, v.bbr, v.btr, v.ftr], fill: "#a07830" },  // right side
+    { pts: [v.ftr, v.btr, v.bbr, v.fbr], fill: "#a07830" },  // right side
     { pts: [v.fbl, v.fbr, v.ftr, v.ftl], fill: "#c49450" },  // front
   ];
 
