@@ -20,7 +20,9 @@ function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <h1>boxsvg</h1>
+        <div className="brand">
+          <span className="brand-name">boxsvg</span>
+        </div>
         <ParameterForm
           form={form}
           setField={setField}
@@ -35,6 +37,9 @@ function App() {
           <IsometricBox length={L} width={W} height={H} lid={form.lid} size={180} />
         </div>
         <DownloadButton dieline={dieline} units={form.units} filename={filename} />
+        <footer className="sidebar-footer">
+          Parametric box dieline generator
+        </footer>
       </aside>
       <main className="preview">
         <SvgPreview dieline={dieline} />
