@@ -32,7 +32,7 @@ function App() {
           defaultFilename={defaultFilename}
         />
         <div className="isometric-preview">
-          <IsometricBox length={L} width={W} height={H} size={180} />
+          <IsometricBox length={L} width={W} height={H} lid={form.lid} size={180} />
         </div>
         <DownloadButton dieline={dieline} units={form.units} filename={filename} />
       </aside>

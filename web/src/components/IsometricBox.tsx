@@ -12,10 +12,11 @@ interface Props {
   length: number;
   width: number;
   height: number;
+  lid: "over" | "inside";
   size?: number;
 }
 
-export function IsometricBox({ length: L, width: W, height: H, size = 200 }: Props) {
+export function IsometricBox({ length: L, width: W, height: H, lid, size = 200 }: Props) {
   if (L <= 0 || W <= 0 || H <= 0) return null;
 
   const v = {
@@ -33,7 +34,7 @@ export function IsometricBox({ length: L, width: W, height: H, size = 200 }: Pro
   // Tapered by H/8 on each side at the outer edge
   const taper = H / 8;
   const lidDepth = H / 2;
-  const lid = {
+  const lidV = {
     tl: project(0, 0, W),                    // hinge left (= btl)
     tr: project(L, 0, W),                    // hinge right (= btr)
     br: project(L - taper, lidDepth, W),     // outer right (tapered)
@@ -45,7 +46,7 @@ export function IsometricBox({ length: L, width: W, height: H, size = 200 }: Pro
   const seamBack = project(L, H / 2, W);
 
   // Auto-scale to fit viewport (include lid vertices)
-  const all = [...Object.values(v), lid.bl, lid.br];
+  const all = [...Object.values(v), lidV.bl, lidV.br];
   const xs = all.map((p) => p[0]);
   const ys = all.map((p) => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -66,7 +67,7 @@ export function IsometricBox({ length: L, width: W, height: H, size = 200 }: Pro
     { pts: [v.btl, v.btr, v.bbr, v.bbl], fill: "#8b6520" },  // back
   ];
 
-  const lidPoly = [lid.tl, lid.tr, lid.br, lid.bl].map(s).join(" ");
+  const lidPoly = [lidV.tl, lidV.tr, lidV.br, lidV.bl].map(s).join(" ");
 
   const facesOver = [
     { pts: [v.ftl, v.ftr, v.btr, v.btl], fill: "#d4a76a" },  // top
@@ -85,14 +86,16 @@ export function IsometricBox({ length: L, width: W, height: H, size = 200 }: Pro
           strokeLinejoin="round"
         />
       ))}
-      {/* Lid flap on back panel */}
-      <polygon
-        points={lidPoly}
-        fill="#b8884a"
-        stroke="#6b4c14"
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-      />
+      {/* Lid flap on back panel (only shown for "over" lid fit) */}
+      {lid === "over" && (
+        <polygon
+          points={lidPoly}
+          fill="#b8884a"
+          stroke="#6b4c14"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+        />
+      )}
       {facesOver.map((face, i) => (
         <polygon
           key={`o${i}`}
