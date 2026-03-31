@@ -1,6 +1,6 @@
 import type { BoxRequest, Dieline, Element } from "../models";
 import { effectiveThickness, effectiveKerf, resolveEmbellishments } from "../models";
-import { hline, vline, pathFromPoints, roundedCorner, roundedPath, applyKerf } from "./helpers";
+import { hline, vline, pathFromPoints, roundedPath, applyKerf } from "./helpers";
 import {
   MAILER_TUCK_DEPTH_RATIO,
   MAILER_TUCK_TAPER_RATIO,
@@ -120,16 +120,15 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
 
   // === CUT OUTLINE ===
 
-  // --- TUCK (with optional rounded tip corners) ---
-  elements.push(...roundedCorner(
-    tuckTl, 0,  tuckTr, 0,  tuckBr, yTop,
-    tuckR, "cut",
-  ));
-  elements.push(...pathFromPoints([
-    [tuckBr, yTop],
+  // --- TUCK (full shape with rounded corners at all 4 points) ---
+  // Path: tuck tip left → tip right → base right → body transition
+  elements.push(...roundedPath([
+    [tuckTl, 0],        // tip left (start)
+    [tuckTr, 0],        // tip right
+    [tuckBr, yTop],     // base right (taper meets score line)
     [narrowRight, yTop],
-    [wideRight, yTop],
-  ], "cut"));
+    [wideRight, yTop],  // transition to wide body
+  ], [tuckR, tuckR, 0], "cut"));
 
   // --- RIGHT SIDE (going down) ---
   // Top panel flap
@@ -231,15 +230,12 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   ));
 
   // --- Close back to tuck ---
-  elements.push(...pathFromPoints([
+  elements.push(...roundedPath([
     [wideLeft, yTop],
     [narrowLeft, yTop],
-    [tuckBl, yTop],
-  ], "cut"));
-  elements.push(...roundedCorner(
-    tuckBl, yTop,  tuckTl, 0,  tuckTl, 0,
-    tuckR, "cut",
-  ));
+    [tuckBl, yTop],     // base left (taper meets score line)
+    [tuckTl, 0],        // tip left (closes the path)
+  ], [0, tuckR], "cut"));
 
   // === SCORE LINES ===
   elements.push(hline(wideLeft, wideRight, yTop, "score"));
