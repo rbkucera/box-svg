@@ -24,14 +24,17 @@ export function SvgPreview({ dieline }: Props) {
   const cutElements = dieline.elements.filter((el) => el.kind === "cut");
   const scoreElements = dieline.elements.filter((el) => el.kind === "score");
 
-  // Rotate 90° for landscape: swap viewBox dimensions, rotate content
+  // Rotate 90° CCW for landscape display
+  // After rotating -90° around origin: (x,y) → (y, -x)
+  // Shift right by svgH to keep all coords positive
+  // New bounding box: svgH wide × svgW tall
   return (
     <svg
       viewBox={`0 0 ${svgH} ${svgW}`}
       preserveAspectRatio="xMidYMid meet"
       style={{ width: "100%", height: "100%", background: "#fff" }}
     >
-      <g transform={`rotate(-90, ${svgH / 2}, ${svgH / 2})`}>
+      <g transform={`rotate(-90, 0, 0) translate(${-svgH}, 0)`}>
         <g id="cut" stroke={CUT_COLOR} strokeWidth={STROKE_WIDTH} fill="none">
           {cutElements.map((el, i) => (
             <line
