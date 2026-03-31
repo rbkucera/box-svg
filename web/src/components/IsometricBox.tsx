@@ -5,7 +5,7 @@ const SIN30 = Math.sin(Math.PI / 6);
 function project(x: number, y: number, z: number): [number, number] {
   return [
     (x - z) * COS30,
-    (x + z) * SIN30 + y,  // +y because SVG y goes down, and height goes down
+    (x + z) * SIN30 + y,
   ];
 }
 
@@ -20,19 +20,19 @@ export function IsometricBox({ length: L, width: W, height: H, size = 200 }: Pro
   if (L <= 0 || W <= 0 || H <= 0) return null;
 
   // 8 vertices — y=0 is top, y=H is bottom (SVG convention)
-  const pts = {
-    ftl: project(0, 0, 0),       // front-top-left
-    ftr: project(L, 0, 0),       // front-top-right
-    btl: project(0, 0, W),       // back-top-left
-    btr: project(L, 0, W),       // back-top-right
-    fbl: project(0, H, 0),       // front-bottom-left
-    fbr: project(L, H, 0),       // front-bottom-right
-    bbl: project(0, H, W),       // back-bottom-left
-    bbr: project(L, H, W),       // back-bottom-right
+  const v = {
+    ftl: project(0, 0, 0),
+    ftr: project(L, 0, 0),
+    btl: project(0, 0, W),
+    btr: project(L, 0, W),
+    fbl: project(0, H, 0),
+    fbr: project(L, H, 0),
+    bbl: project(0, H, W),
+    bbr: project(L, H, W),
   };
 
-  // Auto-scale to fit viewport with padding
-  const all = Object.values(pts);
+  // Auto-scale to fit viewport
+  const all = Object.values(v);
   const xs = all.map((p) => p[0]);
   const ys = all.map((p) => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -42,18 +42,33 @@ export function IsometricBox({ length: L, width: W, height: H, size = 200 }: Pro
   const ox = size / 2 - ((minX + maxX) / 2) * scale;
   const oy = size / 2 - ((minY + maxY) / 2) * scale;
 
-  const toSvg = (p: [number, number]) => `${p[0] * scale + ox},${p[1] * scale + oy}`;
+  const s = (p: [number, number]) => `${p[0] * scale + ox},${p[1] * scale + oy}`;
 
-  // 3 visible faces (draw back-to-front: top, right side, front)
-  const topFace = [pts.ftl, pts.ftr, pts.btr, pts.btl].map(toSvg).join(" ");
-  const rightFace = [pts.fbr, pts.bbr, pts.btr, pts.ftr].map(toSvg).join(" ");
-  const frontFace = [pts.fbl, pts.fbr, pts.ftr, pts.ftl].map(toSvg).join(" ");
+  // All 6 faces, drawn back-to-front for correct occlusion
+  const faces = [
+    // Back 3 faces (hidden, draw first)
+    { pts: [v.btl, v.btr, v.bbr, v.bbl], fill: "#8b6520" },  // back
+    { pts: [v.fbl, v.bbl, v.bbr, v.fbr], fill: "#7a5a1c" },  // bottom
+    { pts: [v.btl, v.bbl, v.fbl, v.ftl], fill: "#7a5a1c" },  // left side
+
+    // Front 3 faces (visible)
+    { pts: [v.ftl, v.ftr, v.btr, v.btl], fill: "#d4a76a" },  // top
+    { pts: [v.fbr, v.bbr, v.btr, v.ftr], fill: "#a07830" },  // right side
+    { pts: [v.fbl, v.fbr, v.ftr, v.ftl], fill: "#c49450" },  // front
+  ];
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <polygon points={topFace} fill="#d4a76a" stroke="#8b6914" strokeWidth={1.5} />
-      <polygon points={rightFace} fill="#a07830" stroke="#8b6914" strokeWidth={1.5} />
-      <polygon points={frontFace} fill="#c49450" stroke="#8b6914" strokeWidth={1.5} />
+      {faces.map((face, i) => (
+        <polygon
+          key={i}
+          points={face.pts.map(s).join(" ")}
+          fill={face.fill}
+          stroke="#6b4c14"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+        />
+      ))}
     </svg>
   );
 }
