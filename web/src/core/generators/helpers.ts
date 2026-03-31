@@ -69,9 +69,9 @@ export function roundedCorner(
   const t2x = cx + (d2x / len2) * r;
   const t2y = cy + (d2y / len2) * r;
 
-  // Determine sweep direction using cross product (SVG Y-down convention)
+  // Determine sweep direction using cross product
   const cross = d1x * d2y - d1y * d2x;
-  const sweep: 0 | 1 = cross > 0 ? 0 : 1;
+  const sweep: 0 | 1 = cross >= 0 ? 1 : 0;
 
   const elements: Element[] = [];
 
@@ -182,7 +182,7 @@ export function roundedPath(
       const dPx = px - cx, dPy = py - cy;
       const dNx = nx - cx, dNy = ny - cy;
       const cross = dPx * dNy - dPy * dNx;
-      const sweep: 0 | 1 = cross > 0 ? 0 : 1;
+      const sweep: 0 | 1 = cross >= 0 ? 1 : 0;
       els.push({ type: "arc", x1: tbx, y1: tby, x2: tax, y2: tay, r, sweep, kind });
     }
 

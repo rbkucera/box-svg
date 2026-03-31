@@ -29,8 +29,8 @@ function RenderElement({ el, maxX }: { el: Element; maxX: number }) {
     const sx1 = rx(el.x1, el.y1), sy1 = ry(el.x1, el.y1);
     const sx2 = rx(el.x2, el.y2), sy2 = ry(el.x2, el.y2);
     const rPx = el.r * PPI;
-    // The coordinate swap (x,y)→(y,maxX-x) preserves winding, so keep sweep as-is
-    const sweep = el.sweep;
+    // The rotation (x,y)→(y, maxX-x) includes an x-reflection, which flips sweep
+    const sweep = el.sweep === 0 ? 1 : 0;
     return (
       <path d={`M ${sx1},${sy1} A ${rPx},${rPx} 0 0,${sweep} ${sx2},${sy2}`} />
     );
