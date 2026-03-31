@@ -1,4 +1,53 @@
+:root {
+  color-scheme: light;
+  --desktop: #bfc7d1;
+  --workspace: #7e8792;
+  --panel: #cfd4db;
+  --panel-2: #d8dde4;
+  --ink: #2f3943;
+  --ink-strong: #0e1822;
+  --muted: #4e5a66;
+  --title-blue: #0b62c0;
+  --title-blue-dark: #003f8d;
+  --edge-light: #ffffff;
+  --edge-mid-light: #edf0f4;
+  --edge-mid-dark: #808894;
+  --edge-dark: #404854;
+  font-family: Tahoma, "Segoe UI", sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-strong);
+  background: var(--desktop);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html, body, #root {
-  height: 100%;
+  min-height: 100%;
   margin: 0;
+}
+
+body {
+  background: var(--desktop);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(11, 98, 192, 0.24);
 }
