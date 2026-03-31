@@ -234,7 +234,7 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
     [tuckTl, 0],         // tip left (rounded)
     [tuckTr, 0],         // tip right (rounded)
     [tuckBr, yTop],      // base right (sharp) — connects to opening path
-  ], [0, 0, tuckR, 0], "cut"));
+  ], [0, 0, tuckR, tuckR], "cut"));
 
   // === SCORE LINES ===
   elements.push(hline(wideLeft, wideRight, yTop, "score"));
