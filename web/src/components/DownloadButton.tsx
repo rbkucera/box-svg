@@ -21,7 +21,8 @@ export function DownloadButton({ dieline, units, filename }: Props) {
       disabled={!dieline}
       className="download-button"
     >
-      Download SVG
+      <span>Download SVG</span>
+      <small>{filename}</small>
     </button>
   );
 }

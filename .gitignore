@@ -9,5 +9,6 @@ build/
 venv/
 *.svg
 !tests/fixtures/*.svg
+!web/src/assets/*.svg
 web/node_modules/
 web/dist/

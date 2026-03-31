@@ -26,11 +26,9 @@ export function ParameterForm({
 
   return (
     <div className="parameter-form">
-      <h2>Box Parameters</h2>
-
-      <fieldset>
+      <fieldset className="fieldset-grid fieldset-style">
         <legend>Style</legend>
-        <label>
+        <label className="field-span-2">
           Box style
           <select value={form.style} onChange={(e) => setStyle(e.target.value as BoxStyle)}>
             {STYLE_DEFINITIONS.map((s) => (
@@ -40,10 +38,10 @@ export function ParameterForm({
         </label>
       </fieldset>
 
-      <fieldset>
+      <fieldset className="fieldset-grid fieldset-dimensions">
         <legend>Dimensions</legend>
 
-        <label>
+        <label className="field-span-3">
           Units
           <select value={form.units} onChange={(e) => setUnits(e.target.value as Units)}>
             <option value="in">Inches</option>
@@ -94,10 +92,10 @@ export function ParameterForm({
         </label>
       </fieldset>
 
-      <fieldset>
+      <fieldset className="fieldset-grid fieldset-material">
         <legend>Material</legend>
 
-        <label>
+        <label className="field-span-2">
           Material
           <select
             value={form.material}
@@ -134,10 +132,10 @@ export function ParameterForm({
         </label>
       </fieldset>
 
-      <fieldset>
+      <fieldset className="fieldset-grid fieldset-options">
         <legend>Options</legend>
 
-        <label>
+        <label className="field-span-2">
           Lid fit
           <select
             value={form.lid}
@@ -150,7 +148,7 @@ export function ParameterForm({
           </select>
         </label>
 
-        <label>
+        <label className="field-span-2">
           Filename
           <input
             type="text"
@@ -163,6 +161,7 @@ export function ParameterForm({
 
       {otherErrors.length > 0 && (
         <div className="error-list">
+          <p className="notice-label">Input issues</p>
           {otherErrors.map((e, i) => (
             <p key={i} className="error">{e}</p>
           ))}
@@ -171,6 +170,7 @@ export function ParameterForm({
 
       {warnings.length > 0 && (
         <div className="warning-list">
+          <p className="notice-label">Production notes</p>
           {warnings.map((w, i) => <p key={i} className="warning">{w}</p>)}
         </div>
       )}
