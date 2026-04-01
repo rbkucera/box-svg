@@ -233,13 +233,15 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
     [tuckBl, yTop],
   ], "cut"));
 
-  // --- Tuck flap (isolated path, same winding as tuck-top: up, across, down) ---
+  // --- Tuck flap (isolated path: up, across, down) ---
+  // Negative radii flip the arc sweep to produce convex (outward) rounding
+  // at the tuck tips, since the default inside-corner rounding would scallop.
   elements.push(...roundedPath([
     [tuckBl, yTop],
     [tuckTl, 0],
     [tuckTr, 0],
     [tuckBr, yTop],
-  ], [tuckR, tuckR], "cut"));
+  ], [-tuckR, -tuckR], "cut"));
 
   // === SCORE LINES ===
   elements.push(hline(wideLeft, wideRight, yTop, "score"));
