@@ -80,7 +80,6 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
   elements.push(vline(x5, y2, y3, "cut"));
 
   // Top tuck flap + top closure panel on the rear panel
-  // Negative radii at tip corners flip arc sweep for convex outward rounding
   elements.push(...roundedPath(
     [[x1, y2], [x1, y1], [x1 + tuckInset, y0], [x2 - tuckInset, y0], [x2, y1], [x2, y2]],
     [0, tuckR, tuckR, 0],

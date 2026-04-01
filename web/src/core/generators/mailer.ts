@@ -233,9 +233,7 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
     [tuckBl, yTop],
   ], "cut"));
 
-  // --- Tuck flap (isolated path: up, across, down) ---
-  // Negative radii flip the arc sweep to produce convex (outward) rounding
-  // at the tuck tips, since the default inside-corner rounding would scallop.
+  // --- Tuck flap (isolated path, same winding as tuck-top: up, across, down) ---
   elements.push(...roundedPath([
     [tuckBl, yTop],
     [tuckTl, 0],
