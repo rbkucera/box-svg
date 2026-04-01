@@ -226,15 +226,20 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
     flapR, bevelR, "cut",
   ));
 
-  // --- Close: base left + full tuck top edge with both tips rounded ---
-  elements.push(...roundedPath([
+  // --- Close: body transitions to tuck base left ---
+  elements.push(...pathFromPoints([
     [wideLeft, yTop],
     [narrowLeft, yTop],
-    [tuckBl, yTop],      // base left (sharp)
-    [tuckTl, 0],         // tip left (rounded)
-    [tuckTr, 0],         // tip right (rounded)
-    [tuckBr, yTop],      // base right (sharp) — connects to opening path
-  ], [0, 0, -tuckR, -tuckR], "cut"));
+    [tuckBl, yTop],
+  ], "cut"));
+
+  // --- Tuck flap (isolated path, same winding as tuck-top: up, across, down) ---
+  elements.push(...roundedPath([
+    [tuckBl, yTop],
+    [tuckTl, 0],
+    [tuckTr, 0],
+    [tuckBr, yTop],
+  ], [tuckR, tuckR], "cut"));
 
   // === SCORE LINES ===
   elements.push(hline(wideLeft, wideRight, yTop, "score"));
