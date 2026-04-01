@@ -31,8 +31,10 @@ export function ParameterForm({
   const merged = { ...DEFAULT_EMBELLISHMENTS, ...embellishments };
   const [jsonText, setJsonText] = useState(() => JSON.stringify(merged, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [prevJsonText, setPrevJsonText] = useState<string | null>(null);
 
   const handleJsonChange = (text: string) => {
+    const oldText = jsonText;
     setJsonText(text);
     try {
       const parsed = JSON.parse(text);
@@ -61,9 +63,25 @@ export function ParameterForm({
           partial[key] = v as number;
         }
       }
-      setEmbellishments(partial);  // full replacement, not merge
+      setPrevJsonText(oldText);  // save for undo before applying
+      setEmbellishments(partial);
     } catch {
       setJsonError("Invalid JSON");
+    }
+  };
+
+  const handleReset = () => {
+    const defaultText = JSON.stringify(DEFAULT_EMBELLISHMENTS, null, 2);
+    setPrevJsonText(jsonText);
+    setJsonText(defaultText);
+    setJsonError(null);
+    setEmbellishments({});
+  };
+
+  const handleUndo = () => {
+    if (prevJsonText !== null) {
+      handleJsonChange(prevJsonText);
+      setPrevJsonText(null);
     }
   };
 
@@ -150,7 +168,7 @@ export function ParameterForm({
           </select>
         </label>
 
-        <label>
+        <label className="field-span-2">
           Thickness (optional)
           <input
             type="number"
@@ -211,6 +229,10 @@ export function ParameterForm({
           />
         </label>
         {jsonError && <p className="json-error-msg">{jsonError}</p>}
+        <div className="json-actions">
+          <button type="button" className="json-action-btn" onClick={handleUndo} disabled={prevJsonText === null}>Undo</button>
+          <button type="button" className="json-action-btn" onClick={handleReset}>Reset</button>
+        </div>
       </details>
 
       {otherErrors.length > 0 && (
