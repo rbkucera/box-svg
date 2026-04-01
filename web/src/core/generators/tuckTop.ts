@@ -71,8 +71,8 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
 
   // Glue tab with beveled ends (optionally rounded)
   elements.push(...roundedPath(
-    [[x1, y2], [x0, y2 + glueBevel], [x0, y3 - glueBevel], [x1, y3]],
-    [glueR, glueR],
+    [[x1, y2], [x1, y2 + thickness], [x0, y2 + glueBevel], [x0, y3 - glueBevel], [x1, y3 - thickness], [x1, y3]],
+    [0, glueR, glueR, 0],
     "cut",
   ));
 
@@ -88,8 +88,8 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
 
   // Top dust flap on first side panel
   elements.push(...roundedPath(
-    [[x2, y2], [x2 + dustTaper, y2 - dustDepth], [x3 - dustTaper, y2 - dustDepth], [x3, y2]],
-    [dustR, dustR],
+    [[x2, y2], [x2 + thickness, y2], [x2 + dustTaper, y2 - dustDepth], [x3 - dustTaper, y2 - dustDepth], [x3 - thickness, y2], [x3, y2]],
+    [0, dustR, dustR, 0],
     "cut",
   ));
 
@@ -98,8 +98,8 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
 
   // Top dust flap on second side panel
   elements.push(...roundedPath(
-    [[x4, y2], [x4 + dustTaper, y2 - dustDepth], [x5 - dustTaper, y2 - dustDepth], [x5, y2]],
-    [dustR, dustR],
+    [[x4, y2], [x4 + thickness, y2], [x4 + dustTaper, y2 - dustDepth], [x5 - dustTaper, y2 - dustDepth], [x5 - thickness, y2], [x5, y2]],
+    [0, dustR, dustR, 0],
     "cut",
   ));
 
@@ -108,8 +108,8 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
 
   // Bottom dust flap on first side panel
   elements.push(...roundedPath(
-    [[x2, y3], [x2 + dustTaper, y3 + dustDepth], [x3 - dustTaper, y3 + dustDepth], [x3, y3]],
-    [dustR, dustR],
+    [[x2, y3], [x2 + thickness, y3], [x2 + dustTaper, y3 + dustDepth], [x3 - dustTaper, y3 + dustDepth], [x3 - thickness, y3], [x3, y3]],
+    [0, dustR, dustR, 0],
     "cut",
   ));
 
@@ -122,8 +122,8 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
 
   // Bottom dust flap on second side panel
   elements.push(...roundedPath(
-    [[x4, y3], [x4 + dustTaper, y3 + dustDepth], [x5 - dustTaper, y3 + dustDepth], [x5, y3]],
-    [dustR, dustR],
+    [[x4, y3], [x4 + thickness, y3], [x4 + dustTaper, y3 + dustDepth], [x5 - dustTaper, y3 + dustDepth], [x5 - thickness, y3], [x5, y3]],
+    [0, dustR, dustR, 0],
     "cut",
   ));
 
