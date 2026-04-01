@@ -174,8 +174,16 @@ export function SvgPreview({ dieline }: Props) {
     );
   }
 
-  const svgW = dieline.width * PPI;
-  const svgH = dieline.height * PPI;
+  const rawW = dieline.width * PPI;
+  const rawH = dieline.height * PPI;
+  const isRotated90 = rotation % 180 !== 0;
+  const svgW = isRotated90 ? rawH : rawW;
+  const svgH = isRotated90 ? rawW : rawH;
+
+  // SVG-level rotation transform (rotate around center of original content)
+  const rotateTransform = rotation
+    ? `rotate(${rotation} ${rawW / 2} ${rawH / 2})`
+    : undefined;
   const navigatorWidth = Math.min(NAVIGATOR_SIZE, svgW);
   const navigatorHeight = Math.min(NAVIGATOR_SIZE, (svgH / svgW) * navigatorWidth);
   const visibleWidth = mode === "full" ? viewport.clientWidth : fitViewport.width;
@@ -236,11 +244,14 @@ export function SvgPreview({ dieline }: Props) {
         <div ref={fitCanvasRef} className="preview-canvas preview-canvas-fit">
           <svg
             className="preview-svg preview-svg-fit"
-            viewBox={`0 0 ${svgW} ${svgH}`}
+            viewBox={isRotated90 ? `${(rawW - rawH) / 2} ${(rawH - rawW) / 2} ${rawH} ${rawW}` : `0 0 ${rawW} ${rawH}`}
             preserveAspectRatio="xMidYMid meet"
-            style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
           >
-            <DielineDrawing dieline={dieline} />
+            {rotateTransform ? (
+              <g transform={rotateTransform}><DielineDrawing dieline={dieline} /></g>
+            ) : (
+              <DielineDrawing dieline={dieline} />
+            )}
           </svg>
         </div>
       ) : (
@@ -249,19 +260,20 @@ export function SvgPreview({ dieline }: Props) {
             <div
               ref={contentRef}
               className="preview-scroll-content"
-              style={rotation % 180 !== 0
-                ? { width: `${svgH}px`, height: `${svgW}px` }
-                : { width: `${svgW}px`, height: `${svgH}px` }}
+              style={{ width: `${svgW}px`, height: `${svgH}px` }}
             >
               <svg
                 className="preview-svg preview-svg-full"
                 width={svgW}
                 height={svgH}
-                viewBox={`0 0 ${svgW} ${svgH}`}
+                viewBox={isRotated90 ? `${(rawW - rawH) / 2} ${(rawH - rawW) / 2} ${rawH} ${rawW}` : `0 0 ${rawW} ${rawH}`}
                 preserveAspectRatio="xMidYMid meet"
-                style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
               >
-                <DielineDrawing dieline={dieline} />
+                {rotateTransform ? (
+                  <g transform={rotateTransform}><DielineDrawing dieline={dieline} /></g>
+                ) : (
+                  <DielineDrawing dieline={dieline} />
+                )}
               </svg>
             </div>
           </div>
@@ -276,13 +288,16 @@ export function SvgPreview({ dieline }: Props) {
             >
               <svg
                 className="preview-navigator-svg"
-                viewBox={`0 0 ${svgW} ${svgH}`}
+                viewBox={isRotated90 ? `${(rawW - rawH) / 2} ${(rawH - rawW) / 2} ${rawH} ${rawW}` : `0 0 ${rawW} ${rawH}`}
                 width={navigatorWidth}
                 height={navigatorHeight}
                 preserveAspectRatio="xMidYMid meet"
-                style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
               >
-                <DielineDrawing dieline={dieline} />
+                {rotateTransform ? (
+                  <g transform={rotateTransform}><DielineDrawing dieline={dieline} /></g>
+                ) : (
+                  <DielineDrawing dieline={dieline} />
+                )}
                 <rect
                   x={viewport.scrollLeft}
                   y={viewport.scrollTop}

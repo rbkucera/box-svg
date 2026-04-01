@@ -520,10 +520,6 @@ input:disabled {
   background: #d5dce8;
 }
 
-.preview-svg {
-  transition: transform 0.2s ease;
-}
-
 .preview-canvas {
   position: relative;
   display: flex;
