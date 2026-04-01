@@ -66,6 +66,7 @@ function DielineDrawing({ dieline }: { dieline: Dieline }) {
 
 export function SvgPreview({ dieline }: Props) {
   const [mode, setMode] = useState<PreviewMode>("fit");
+  const [rotation, setRotation] = useState(0);
   const [viewport, setViewport] = useState<ViewportMetrics>({
     scrollLeft: 0,
     scrollTop: 0,
@@ -221,6 +222,14 @@ export function SvgPreview({ dieline }: Props) {
           </button>
         </div>
         {viewportLabel ? <span className="preview-status">{viewportLabel}</span> : null}
+        <button
+          type="button"
+          className="preview-rotate-button"
+          onClick={() => setRotation((r) => (r + 90) % 360)}
+          title={`Rotate (currently ${rotation}°)`}
+        >
+          ⟳ {rotation > 0 ? `${rotation}°` : ""}
+        </button>
       </div>
 
       {mode === "fit" ? (
@@ -229,6 +238,7 @@ export function SvgPreview({ dieline }: Props) {
             className="preview-svg preview-svg-fit"
             viewBox={`0 0 ${svgW} ${svgH}`}
             preserveAspectRatio="xMidYMid meet"
+            style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
           >
             <DielineDrawing dieline={dieline} />
           </svg>
@@ -239,7 +249,9 @@ export function SvgPreview({ dieline }: Props) {
             <div
               ref={contentRef}
               className="preview-scroll-content"
-              style={{ width: `${svgW}px`, height: `${svgH}px` }}
+              style={rotation % 180 !== 0
+                ? { width: `${svgH}px`, height: `${svgW}px` }
+                : { width: `${svgW}px`, height: `${svgH}px` }}
             >
               <svg
                 className="preview-svg preview-svg-full"
@@ -247,6 +259,7 @@ export function SvgPreview({ dieline }: Props) {
                 height={svgH}
                 viewBox={`0 0 ${svgW} ${svgH}`}
                 preserveAspectRatio="xMidYMid meet"
+                style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
               >
                 <DielineDrawing dieline={dieline} />
               </svg>
@@ -267,6 +280,7 @@ export function SvgPreview({ dieline }: Props) {
                 width={navigatorWidth}
                 height={navigatorHeight}
                 preserveAspectRatio="xMidYMid meet"
+                style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
               >
                 <DielineDrawing dieline={dieline} />
                 <rect

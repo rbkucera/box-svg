@@ -502,6 +502,28 @@ input:disabled {
   letter-spacing: 0.06em;
 }
 
+.preview-rotate-button {
+  margin-left: auto;
+  min-width: 40px;
+  height: 21px;
+  padding: 0 6px;
+  border: 2px solid;
+  border-color: var(--edge-light) var(--edge-dark) var(--edge-dark) var(--edge-light);
+  background: var(--panel);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.preview-rotate-button:active {
+  border-color: var(--edge-dark) var(--edge-light) var(--edge-light) var(--edge-dark);
+  background: #d5dce8;
+}
+
+.preview-svg {
+  transition: transform 0.2s ease;
+}
+
 .preview-canvas {
   position: relative;
   display: flex;
