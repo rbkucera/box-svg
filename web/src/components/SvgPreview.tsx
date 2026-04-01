@@ -299,8 +299,8 @@ export function SvgPreview({ dieline }: Props) {
                   <DielineDrawing dieline={dieline} />
                 )}
                 <rect
-                  x={viewport.scrollLeft}
-                  y={viewport.scrollTop}
+                  x={viewport.scrollLeft + (isRotated90 ? (rawW - rawH) / 2 : 0)}
+                  y={viewport.scrollTop + (isRotated90 ? (rawH - rawW) / 2 : 0)}
                   width={Math.min(viewport.clientWidth || svgW, svgW)}
                   height={Math.min(viewport.clientHeight || svgH, svgH)}
                   fill="rgba(56, 133, 255, 0.14)"
