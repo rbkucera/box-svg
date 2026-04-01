@@ -108,8 +108,8 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   const tuckTaper = H * MAILER_TUCK_TAPER_RATIO;
   const tuckBl = narrowLeft + tuckBaseInset;
   const tuckBr = narrowRight - tuckBaseInset;
-  const tuckTl = tuckBl + tuckTaper;
-  const tuckTr = tuckBr - tuckTaper;
+  const tuckTl = narrowLeft + tuckTaper;
+  const tuckTr = narrowRight - tuckTaper;
 
   // Embellishment radii
   const flapR = emb.flapCornerRadius;
