@@ -11,6 +11,7 @@ function App() {
     form, setField, setStyle, setUnits, swapToSmallest, lidLocked,
     errors, warnings, dieline,
     thicknessPlaceholder, defaultFilename,
+    embellishments, setEmbellishments,
   } = useBoxRequest();
 
   const L = parseFloat(form.length) || 0;
@@ -47,6 +48,8 @@ function App() {
               warnings={warnings}
               thicknessPlaceholder={thicknessPlaceholder}
               defaultFilename={defaultFilename}
+              embellishments={embellishments}
+              setEmbellishments={setEmbellishments}
             />
 
             <div className="isometric-panel">

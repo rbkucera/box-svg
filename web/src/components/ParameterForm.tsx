@@ -1,6 +1,7 @@
+import { useState } from "react";
 import type { FormState } from "../hooks/useBoxRequest";
-import type { BoxStyle, Units, Material, LidFit } from "../core/models";
-import { SUPPORTED_MATERIALS, SUPPORTED_LID_FITS, STYLE_DEFINITIONS } from "../core/models";
+import type { BoxStyle, Units, Material, LidFit, EmbellishmentConfig } from "../core/models";
+import { SUPPORTED_MATERIALS, SUPPORTED_LID_FITS, STYLE_DEFINITIONS, DEFAULT_EMBELLISHMENTS } from "../core/models";
 
 interface Props {
   form: FormState;
@@ -13,6 +14,8 @@ interface Props {
   warnings: string[];
   thicknessPlaceholder: string;
   defaultFilename: string;
+  embellishments: Partial<EmbellishmentConfig>;
+  setEmbellishments: React.Dispatch<React.SetStateAction<Partial<EmbellishmentConfig>>>;
 }
 
 const HEIGHT_ERROR = "Height should be the smallest dimension";
@@ -20,9 +23,49 @@ const HEIGHT_ERROR = "Height should be the smallest dimension";
 export function ParameterForm({
   form, setField, setStyle, setUnits, swapToSmallest, lidLocked,
   errors, warnings, thicknessPlaceholder, defaultFilename,
+  embellishments, setEmbellishments,
 }: Props) {
   const hasHeightError = errors.includes(HEIGHT_ERROR);
   const otherErrors = errors.filter((e) => e !== HEIGHT_ERROR);
+
+  const merged = { ...DEFAULT_EMBELLISHMENTS, ...embellishments };
+  const [jsonText, setJsonText] = useState(() => JSON.stringify(merged, null, 2));
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  const handleJsonChange = (text: string) => {
+    setJsonText(text);
+    try {
+      const parsed = JSON.parse(text);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        setJsonError("Must be a JSON object");
+        return;
+      }
+      const validKeys = Object.keys(DEFAULT_EMBELLISHMENTS);
+      const badKeys = Object.keys(parsed).filter((k) => !validKeys.includes(k));
+      if (badKeys.length > 0) {
+        setJsonError(`Unknown keys: ${badKeys.join(", ")}`);
+        return;
+      }
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof v !== "number") {
+          setJsonError(`"${k}" must be a number`);
+          return;
+        }
+      }
+      setJsonError(null);
+      // Only send non-default values
+      const partial: Partial<EmbellishmentConfig> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        const key = k as keyof EmbellishmentConfig;
+        if (v !== DEFAULT_EMBELLISHMENTS[key]) {
+          partial[key] = v as number;
+        }
+      }
+      setEmbellishments(partial);  // full replacement, not merge
+    } catch {
+      setJsonError("Invalid JSON");
+    }
+  };
 
   return (
     <div className="parameter-form">
@@ -158,6 +201,21 @@ export function ParameterForm({
           />
         </label>
       </fieldset>
+
+      <details className="fieldset-advanced">
+        <summary>Advanced</summary>
+        <label>
+          Embellishments
+          <textarea
+            className={jsonError ? "json-textarea json-error" : "json-textarea"}
+            value={jsonText}
+            onChange={(e) => handleJsonChange(e.target.value)}
+            rows={8}
+            spellCheck={false}
+          />
+        </label>
+        {jsonError && <p className="json-error-msg">{jsonError}</p>}
+      </details>
 
       {otherErrors.length > 0 && (
         <div className="error-list">

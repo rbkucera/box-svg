@@ -170,5 +170,7 @@ export function useBoxRequest() {
     dieline,
     thicknessPlaceholder,
     defaultFilename,
+    embellishments,
+    setEmbellishments,
   };
 }
