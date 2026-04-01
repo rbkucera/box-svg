@@ -55,7 +55,7 @@ function App() {
             <div className="isometric-panel">
               <div className="mini-panel-title">BOX MODEL</div>
               <div className="isometric-preview">
-                <IsometricBox length={L} width={W} height={H} lid={form.lid} size={132} />
+                <IsometricBox length={L} width={W} height={H} lid={form.lid} style={form.style} size={132} />
               </div>
             </div>
 

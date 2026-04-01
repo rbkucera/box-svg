@@ -1,3 +1,5 @@
+import type { BoxStyle } from "../core/models";
+
 const COS30 = Math.cos(Math.PI / 6);
 const SIN30 = Math.sin(Math.PI / 6);
 
@@ -13,10 +15,11 @@ interface Props {
   width: number;
   height: number;
   lid: "over" | "inside";
+  style: BoxStyle;
   size?: number;
 }
 
-export function IsometricBox({ length: L, width: W, height: H, lid, size = 200 }: Props) {
+export function IsometricBox({ length: L, width: W, height: H, lid, style, size = 200 }: Props) {
   if (L <= 0 || W <= 0 || H <= 0) return null;
 
   const v = {
@@ -106,13 +109,15 @@ export function IsometricBox({ length: L, width: W, height: H, lid, size = 200 }
           strokeLinejoin="round"
         />
       ))}
-      {/* Bottom seam on right face */}
-      <line
-        x1={sx(seamFront)} y1={sy(seamFront)}
-        x2={sx(seamBack)} y2={sy(seamBack)}
-        stroke="#6b4c14"
-        strokeWidth={1}
-      />
+      {/* Bottom seam on right face (mailer only) */}
+      {style === "mailer" && (
+        <line
+          x1={sx(seamFront)} y1={sy(seamFront)}
+          x2={sx(seamBack)} y2={sy(seamBack)}
+          stroke="#6b4c14"
+          strokeWidth={1}
+        />
+      )}
     </svg>
   );
 }
