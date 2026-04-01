@@ -81,7 +81,7 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
 
   // Top tuck flap + top closure panel on the rear panel
   elements.push(...roundedPath(
-    [[x1, y2], [x1, y1], [x1 + tuckInset, y0], [x2 - tuckInset, y0], [x2, y1], [x2, y2]],
+    [[x1, y2], [x1 + thickness, y1], [x1 + tuckInset, y0], [x2 - tuckInset, y0], [x2 - thickness, y1], [x2, y2]],
     [0, tuckR, tuckR, 0],
     "cut",
   ));
@@ -115,7 +115,7 @@ export function generateTuckTopDieline(request: BoxRequest): Dieline {
 
   // Bottom tuck flap + bottom closure panel on the front panel
   elements.push(...roundedPath(
-    [[x3, y3], [x3, y4], [x3 + tuckInset, y5], [x4 - tuckInset, y5], [x4, y4], [x4, y3]],
+    [[x3, y3], [x3 + thickness, y4], [x3 + tuckInset, y5], [x4 - tuckInset, y5], [x4 - thickness, y4], [x4, y3]],
     [0, tuckR, tuckR, 0],
     "cut",
   ));
