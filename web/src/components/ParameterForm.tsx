@@ -162,35 +162,6 @@ export function ParameterForm({
           />
         </label>
 
-        <label>
-          Kerf (optional)
-          <input
-            type="number"
-            value={form.kerf}
-            onChange={(e) => setField("kerf", e.target.value)}
-            placeholder="0"
-            min="0"
-            step="any"
-          />
-        </label>
-      </fieldset>
-
-      <fieldset className="fieldset-grid fieldset-options">
-        <legend>Options</legend>
-
-        <label className="field-span-2">
-          Lid fit
-          <select
-            value={form.lid}
-            onChange={(e) => setField("lid", e.target.value as LidFit)}
-            disabled={lidLocked}
-          >
-            {SUPPORTED_LID_FITS.map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-        </label>
-
         <label className="field-span-2">
           Filename
           <input
@@ -204,6 +175,31 @@ export function ParameterForm({
 
       <details className="fieldset-advanced">
         <summary>Advanced</summary>
+        <div className="advanced-fields">
+          <label>
+            Lid fit
+            <select
+              value={form.lid}
+              onChange={(e) => setField("lid", e.target.value as LidFit)}
+              disabled={lidLocked}
+            >
+              {SUPPORTED_LID_FITS.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Kerf
+            <input
+              type="number"
+              value={form.kerf}
+              onChange={(e) => setField("kerf", e.target.value)}
+              placeholder="0"
+              min="0"
+              step="any"
+            />
+          </label>
+        </div>
         <label>
           Embellishments
           <textarea
