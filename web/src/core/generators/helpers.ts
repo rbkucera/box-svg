@@ -117,16 +117,40 @@ export function roundedPath(
   // Negative radius = flip sweep direction (for convex/outside corners)
   const signs = radii.map((r) => r >= 0 ? 1 : -1);
   const clamped = radii.map((r) => Math.max(0, Math.abs(r)));
+
+  // Precompute the half-angle factor for each corner:
+  // d = r * halfAngleFactor, where halfAngleFactor = (1 + cos α) / sin α
+  // This converts arc radius r to tangent distance d along the edge.
+  const halfAngleFactor: number[] = [];
   for (let i = 0; i < clamped.length; i++) {
-    // Corner i sits between edge i and edge i+1
+    const ci = i + 1;
+    const [cx, cy] = points[ci];
+    const [px, py] = points[ci - 1];
+    const [nx, ny] = points[ci + 1];
+    const dPx = px - cx, dPy = py - cy;
+    const dNx = nx - cx, dNy = ny - cy;
+    const lenP = Math.hypot(dPx, dPy);
+    const lenN = Math.hypot(dNx, dNy);
+    const uPx = dPx / lenP, uPy = dPy / lenP;
+    const uNx = dNx / lenN, uNy = dNy / lenN;
+    const dot = uPx * uNx + uPy * uNy;
+    const crossVal = Math.abs(uPx * uNy - uPy * uNx);
+    halfAngleFactor.push(crossVal > 1e-9 ? (1 + dot) / crossVal : 1);
+  }
+
+  // First pass: clamp each corner so its tangent distance d fits on both edges
+  for (let i = 0; i < clamped.length; i++) {
+    const f = halfAngleFactor[i];
     const maxBefore = edgeLens[i] * 0.49;
     const maxAfter = edgeLens[i + 1] * 0.49;
-    clamped[i] = Math.min(clamped[i], maxBefore, maxAfter);
+    // d = r * f, so r ≤ maxEdge / f
+    const maxR = Math.min(maxBefore, maxAfter) / Math.max(f, 1e-9);
+    clamped[i] = Math.min(clamped[i], maxR);
   }
-  // Second pass: if two corners share an edge, their combined radii can't exceed it
+  // Second pass: if two corners share an edge, their combined tangent distances can't exceed it
   for (let i = 0; i < clamped.length - 1; i++) {
     const sharedEdge = edgeLens[i + 1];
-    const combined = clamped[i] + clamped[i + 1];
+    const combined = clamped[i] * halfAngleFactor[i] + clamped[i + 1] * halfAngleFactor[i + 1];
     if (combined > sharedEdge * 0.98) {
       const scale = (sharedEdge * 0.98) / combined;
       clamped[i] *= scale;
@@ -157,8 +181,10 @@ export function roundedPath(
       const dNx = nx - cx, dNy = ny - cy;
       const lenP = Math.hypot(dPx, dPy);
       const lenN = Math.hypot(dNx, dNy);
-      tangentBefore.push([cx + (dPx / lenP) * r, cy + (dPy / lenP) * r]);
-      tangentAfter.push([cx + (dNx / lenN) * r, cy + (dNy / lenN) * r]);
+      // Tangent distance d = r / tan(α/2) = r * halfAngleFactor
+      const d = r * halfAngleFactor[i];
+      tangentBefore.push([cx + (dPx / lenP) * d, cy + (dPy / lenP) * d]);
+      tangentAfter.push([cx + (dNx / lenN) * d, cy + (dNy / lenN) * d]);
     }
   }
 
