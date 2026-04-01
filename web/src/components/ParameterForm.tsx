@@ -63,7 +63,7 @@ export function ParameterForm({
           partial[key] = v as number;
         }
       }
-      setPrevJsonText(oldText);  // save for undo before applying
+      if (!jsonError) setPrevJsonText(oldText);  // only save valid states for undo
       setEmbellishments(partial);
     } catch {
       setJsonError("Invalid JSON");
