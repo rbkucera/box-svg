@@ -60,7 +60,7 @@ export function generateMailerDieline(request: BoxRequest): Dieline {
   const wideBody = L + T;
 
   // Side flap widths
-  const heightFlapW = W * MAILER_FLAP_WIDTH_RATIO;
+  const heightFlapW = Math.min(W * MAILER_FLAP_WIDTH_RATIO, H / 2);
   const widthFlapW = H * MAILER_FLAP_WIDTH_RATIO;
 
   // Bevel inset
